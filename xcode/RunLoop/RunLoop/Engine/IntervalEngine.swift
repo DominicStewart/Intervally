@@ -100,7 +100,6 @@ final class IntervalEngine: ObservableObject {
             guard let info = currentInterval(at: date) else { return 1.0 }
 
             let boundaryIndex = info.boundaryIndex
-            let interval = info.interval
 
             // Calculate start time of current interval
             let intervalStart: Date
@@ -243,13 +242,11 @@ final class IntervalEngine: ObservableObject {
         )
 
         state = .running(startDate: startDate.addingTimeInterval(-timeToSkip), timeline: newTimeline)
-        tick()
 
-        // Trigger transition callback
-        if let info = newTimeline.currentInterval(at: now) {
-            let boundary = newTimeline.boundaries[info.boundaryIndex]
-            onIntervalTransition?(info.interval, boundary.intervalIndex, boundary.cycleIndex)
-        }
+        // Update lastBoundaryIndex to force transition detection in tick()
+        lastBoundaryIndex = -1
+
+        tick()
     }
 
     /// Skip to the previous interval
@@ -289,26 +286,24 @@ final class IntervalEngine: ObservableObject {
         )
 
         state = .running(startDate: startDate.addingTimeInterval(timeToRewind), timeline: newTimeline)
-        lastBoundaryIndex = boundaryIndex - 2
-        tick()
 
-        // Trigger transition callback
-        if let info = newTimeline.currentInterval(at: now) {
-            let boundary = newTimeline.boundaries[info.boundaryIndex]
-            onIntervalTransition?(info.interval, boundary.intervalIndex, boundary.cycleIndex)
-        }
+        // Update lastBoundaryIndex to force transition detection in tick()
+        lastBoundaryIndex = -1
+
+        tick()
     }
 
     // MARK: - Private Methods
 
     private func startTimer() {
-        // Use a high-frequency timer for smooth UI updates
-        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+        // Use optimized timer for smooth UI updates while preserving battery
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.tick()
             }
         }
-        timer?.tolerance = 0.01
+        timer?.tolerance = 0.05
     }
 
     private func stopTimer() {

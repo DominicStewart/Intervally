@@ -264,6 +264,9 @@ final class IntervalViewModel {
     }
 
     private func performCountIn() async {
+        // Give audio session a moment to initialize
+        try? await Task.sleep(for: .milliseconds(200))
+
         // Simple count-in: 3, 2, 1
         for count in (1...3).reversed() {
             if voiceEnabled {

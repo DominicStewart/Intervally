@@ -198,7 +198,7 @@ final class LiveActivityManager {
         do {
             let activity = try Activity<RunLoopActivityAttributes>.request(
                 attributes: attributes,
-                contentState: initialState,
+                content: .init(state: initialState, staleDate: nil),
                 pushType: nil
             )
 
@@ -217,7 +217,7 @@ final class LiveActivityManager {
 
         guard let activity = currentActivity else { return }
 
-        await activity.update(using: state)
+        await activity.update(.init(state: state, staleDate: nil))
         print("🔄 Live Activity updated")
         #endif
     }
@@ -229,7 +229,7 @@ final class LiveActivityManager {
 
         guard let activity = currentActivity else { return }
 
-        await activity.end(dismissalPolicy: .immediate)
+        await activity.end(nil, dismissalPolicy: .immediate)
         currentActivity = nil
         print("🛑 Live Activity ended")
         #endif

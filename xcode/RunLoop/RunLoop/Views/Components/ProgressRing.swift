@@ -47,7 +47,7 @@ struct ProgressRing: View {
                     )
                 )
                 .rotationEffect(.degrees(-90)) // Start from top
-                .animation(.linear(duration: 0.1), value: progress)
+                .animation(nil, value: progress) // No animation for instant updates
         }
     }
 }

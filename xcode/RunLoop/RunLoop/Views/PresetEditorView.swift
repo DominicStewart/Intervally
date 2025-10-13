@@ -22,7 +22,6 @@ struct PresetEditorView: View {
     @State private var isInfinite: Bool
 
     @State private var editingInterval: Interval?
-    @State private var showingIntervalEditor = false
 
     private let isEditing: Bool
     private let originalPresetId: UUID?
@@ -65,12 +64,13 @@ struct PresetEditorView: View {
                 // Intervals
                 Section("Intervals") {
                     ForEach(intervals) { interval in
-                        IntervalRow(interval: interval)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                editingInterval = interval
-                                showingIntervalEditor = true
-                            }
+                        Button {
+                            editingInterval = interval
+                        } label: {
+                            IntervalRow(interval: interval)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
                     .onDelete(perform: deleteIntervals)
                     .onMove(perform: moveIntervals)
@@ -155,11 +155,10 @@ struct PresetEditorView: View {
                     EditButton()
                 }
             }
-            .sheet(isPresented: $showingIntervalEditor) {
-                if let interval = editingInterval {
-                    IntervalEditorView(interval: interval) { updatedInterval in
-                        updateInterval(updatedInterval)
-                    }
+            .sheet(item: $editingInterval) { interval in
+                IntervalEditorView(interval: interval) { updatedInterval in
+                    updateInterval(updatedInterval)
+                    editingInterval = nil
                 }
             }
         }
@@ -267,7 +266,6 @@ struct IntervalRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
-        .padding(.vertical, 4)
     }
 }
 
@@ -323,6 +321,7 @@ struct IntervalEditorView: View {
                         }
                     }
                     .pickerStyle(.wheel)
+                    .frame(height: 120)
 
                     Picker("Seconds", selection: $seconds) {
                         ForEach(0..<60, id: \.self) { sec in
@@ -330,6 +329,7 @@ struct IntervalEditorView: View {
                         }
                     }
                     .pickerStyle(.wheel)
+                    .frame(height: 120)
                 }
 
                 Section("Colour") {
@@ -371,6 +371,8 @@ struct IntervalEditorView: View {
                 }
             }
         }
+        .id(interval.id) // Force refresh when interval changes
+        .presentationDetents([.large]) // Prevent sheet size conflicts
     }
 
     private var isValid: Bool {

@@ -9,6 +9,10 @@ import SwiftUI
 
 struct HomeView: View {
 
+    // MARK: - Constants
+
+    private let appVersion = "1.1.0" // Increment this with each change
+
     // MARK: - Environment
 
     @Environment(PresetStore.self) private var presetStore
@@ -19,6 +23,8 @@ struct HomeView: View {
     @State private var showingPresetEditor = false
     @State private var showingSettings = false
     @State private var editingPreset: Preset?
+    @State private var isDeleteMode = false
+    @State private var presetsToDelete: Set<UUID> = []
 
     // MARK: - Body
 
@@ -34,6 +40,7 @@ struct HomeView: View {
                     if !viewModel.state.isActive {
                         presetSelector
                             .padding(.top)
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
 
                     Spacer()
@@ -46,32 +53,68 @@ struct HomeView: View {
                     // Controls
                     if viewModel.state.isActive {
                         activeControls
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     } else {
                         startButton
+                            .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
 
                     Spacer()
+
+                    // Version number at bottom
+                    if !viewModel.state.isActive {
+                        Text("v\(appVersion)")
+                            .font(.caption2)
+                            .foregroundStyle(.white.opacity(0.4))
+                            .padding(.bottom, 8)
+                    }
                 }
+                .animation(.snappy(duration: 0.25), value: viewModel.state)
                 .padding()
             }
             .navigationTitle("RunLoop")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        showingSettings = true
-                    } label: {
-                        Image(systemName: "gear")
+                    if isDeleteMode {
+                        Button {
+                            confirmDelete()
+                        } label: {
+                            Image(systemName: "checkmark")
+                        }
+                        .disabled(presetsToDelete.isEmpty)
+                    } else {
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            Image(systemName: "gear")
+                        }
                     }
                 }
 
                 if !viewModel.state.isActive {
                     ToolbarItem(placement: .navigationBarLeading) {
-                        Button {
-                            editingPreset = nil
-                            showingPresetEditor = true
-                        } label: {
-                            Image(systemName: "plus")
+                        if isDeleteMode {
+                            Button {
+                                cancelDelete()
+                            } label: {
+                                Text("Cancel")
+                            }
+                        } else {
+                            HStack(spacing: 16) {
+                                Button {
+                                    editingPreset = nil
+                                    showingPresetEditor = true
+                                } label: {
+                                    Image(systemName: "plus")
+                                }
+
+                                Button {
+                                    isDeleteMode = true
+                                } label: {
+                                    Image(systemName: "trash")
+                                }
+                            }
                         }
                     }
                 }
@@ -79,10 +122,12 @@ struct HomeView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
                     .environment(presetStore)
+                    .presentationDragIndicator(.visible)
             }
             .sheet(isPresented: $showingPresetEditor) {
                 PresetEditorView(preset: editingPreset)
                     .environment(presetStore)
+                    .presentationDragIndicator(.visible)
             }
         }
         .onAppear {
@@ -103,39 +148,45 @@ struct HomeView: View {
 
     private var presetSelector: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Select Workout")
-                .font(.headline)
-                .foregroundStyle(.white)
-                .padding(.horizontal)
+            HStack {
+                Text(isDeleteMode ? "Select to Delete" : "Select Workout")
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                if !isDeleteMode {
+                    Text("Tap to edit")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
+            .padding(.horizontal)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 12) {
                     ForEach(presetStore.presets) { preset in
                         PresetCard(
                             preset: preset,
-                            isSelected: presetStore.selectedPresetId == preset.id
+                            isSelected: presetStore.selectedPresetId == preset.id,
+                            isDeleteMode: isDeleteMode,
+                            isMarkedForDeletion: presetsToDelete.contains(preset.id)
                         )
                         .onTapGesture {
-                            presetStore.selectPreset(preset)
-                        }
-                        .contextMenu {
-                            Button {
+                            if isDeleteMode {
+                                togglePresetForDeletion(preset)
+                            } else {
+                                presetStore.selectPreset(preset)
                                 editingPreset = preset
                                 showingPresetEditor = true
-                            } label: {
-                                Label("Edit", systemImage: "pencil")
-                            }
-
-                            Button(role: .destructive) {
-                                presetStore.deletePreset(preset)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
                             }
                         }
                     }
                 }
                 .padding(.horizontal)
+                .padding(.vertical, 8)
             }
+            .frame(height: 120)
         }
     }
 
@@ -213,6 +264,7 @@ struct HomeView: View {
                 .cornerRadius(16)
         }
         .disabled(presetStore.selectedPreset == nil)
+        .buttonStyle(.plain)
         .padding(.horizontal)
     }
 
@@ -230,6 +282,7 @@ struct HomeView: View {
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
+                .buttonStyle(.plain)
 
                 Spacer()
 
@@ -244,6 +297,7 @@ struct HomeView: View {
                         .background(Color.orange)
                         .clipShape(Circle())
                 }
+                .buttonStyle(.plain)
 
                 Spacer()
 
@@ -257,6 +311,7 @@ struct HomeView: View {
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
+                .buttonStyle(.plain)
             }
             .padding(.horizontal)
 
@@ -272,6 +327,7 @@ struct HomeView: View {
                     .background(Color.red.opacity(0.8))
                     .cornerRadius(12)
             }
+            .buttonStyle(.plain)
             .padding(.horizontal)
         }
     }
@@ -310,6 +366,28 @@ struct HomeView: View {
         viewModel.countInEnabled = presetStore.countInEnabled
         viewModel.keepScreenAwake = presetStore.keepScreenAwake
     }
+
+    private func togglePresetForDeletion(_ preset: Preset) {
+        if presetsToDelete.contains(preset.id) {
+            presetsToDelete.remove(preset.id)
+        } else {
+            presetsToDelete.insert(preset.id)
+        }
+    }
+
+    private func confirmDelete() {
+        for presetId in presetsToDelete {
+            if let preset = presetStore.presets.first(where: { $0.id == presetId }) {
+                presetStore.deletePreset(preset)
+            }
+        }
+        cancelDelete()
+    }
+
+    private func cancelDelete() {
+        isDeleteMode = false
+        presetsToDelete.removeAll()
+    }
 }
 
 // MARK: - Preset Card
@@ -317,12 +395,30 @@ struct HomeView: View {
 struct PresetCard: View {
     let preset: Preset
     let isSelected: Bool
+    let isDeleteMode: Bool
+    let isMarkedForDeletion: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(preset.name)
-                .font(.headline)
-                .foregroundStyle(.white)
+            HStack {
+                Text(preset.name)
+                    .font(.headline)
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                if isDeleteMode {
+                    // Checkmark for deletion
+                    Image(systemName: isMarkedForDeletion ? "checkmark.circle.fill" : "circle")
+                        .font(.title3)
+                        .foregroundStyle(isMarkedForDeletion ? .red : .white.opacity(0.5))
+                } else {
+                    // Edit icon indicator
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+            }
 
             Text("\(preset.intervalCount) intervals")
                 .font(.caption)
@@ -334,12 +430,12 @@ struct PresetCard: View {
         }
         .padding()
         .frame(width: 160)
-        .background(isSelected ? Color.blue : Color.white.opacity(0.2))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.white : Color.clear, lineWidth: 2)
+        .background(
+            isDeleteMode && isMarkedForDeletion
+                ? Color.red.opacity(0.3)
+                : (isSelected ? Color.blue : Color.white.opacity(0.2))
         )
+        .cornerRadius(12)
     }
 }
 
