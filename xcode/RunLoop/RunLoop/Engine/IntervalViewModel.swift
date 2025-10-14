@@ -125,10 +125,7 @@ final class IntervalViewModel {
         // Start engine
         engine.start(preset: preset)
 
-        // Schedule notifications for all boundaries
-        if case .running(_, let timeline) = engine.state {
-            await scheduleNotifications(for: timeline)
-        }
+        // No notifications scheduled - app must be running (foreground or background)
     }
 
     /// Pause the current session
@@ -140,11 +137,6 @@ final class IntervalViewModel {
     /// Resume the paused session
     func resume() async {
         engine.resume()
-
-        // Reschedule notifications
-        if case .running(_, let timeline) = engine.state {
-            await scheduleNotifications(for: timeline)
-        }
     }
 
     /// Stop the current session
@@ -247,25 +239,6 @@ final class IntervalViewModel {
         await notificationService.cancelAll()
         audioService.stopSilentAudioLoop()
         audioService.deactivateSession()
-    }
-
-    private func scheduleNotifications(for timeline: IntervalEngine.Timeline) async {
-        await notificationService.cancelAll()
-
-        // Schedule notifications for upcoming boundaries (limit to 50 to respect iOS limit)
-        let boundariesToSchedule = Array(timeline.boundaries.prefix(50))
-
-        for boundary in boundariesToSchedule {
-            let nextBoundary = timeline.boundaries[safe: boundary.intervalIndex + 1]
-            let nextTitle = nextBoundary?.interval.title ?? "Finished"
-
-            await notificationService.scheduleIntervalNotification(
-                at: boundary.date,
-                title: boundary.interval.title,
-                subtitle: "Next: \(nextTitle)",
-                identifier: boundary.date.ISO8601Format()
-            )
-        }
     }
 
     private func performCountIn() async {

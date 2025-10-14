@@ -11,7 +11,7 @@ struct HomeView: View {
 
     // MARK: - Constants
 
-    private let appVersion = "1.2.5" // Increment this with each change
+    private let appVersion = "1.4.3" // Increment this with each change
 
     // MARK: - Environment
 
@@ -20,7 +20,6 @@ struct HomeView: View {
 
     // MARK: - State
 
-    @State private var showingPresetEditor = false
     @State private var showingSettings = false
     @State private var editingPreset: Preset?
     @State private var isDeleteMode = false
@@ -72,7 +71,7 @@ struct HomeView: View {
                 .animation(.snappy(duration: 0.25), value: viewModel.state)
                 .padding()
             }
-            .navigationTitle("RunLoop")
+            .navigationTitle("Intervally")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -83,12 +82,16 @@ struct HomeView: View {
                             Image(systemName: "checkmark")
                         }
                         .disabled(presetsToDelete.isEmpty)
+                        .accessibilityLabel("Confirm deletion")
+                        .accessibilityHint(presetsToDelete.isEmpty ? "Select workouts to delete first" : "Delete selected workouts")
                     } else {
                         Button {
                             showingSettings = true
                         } label: {
                             Image(systemName: "gear")
                         }
+                        .accessibilityLabel("Settings")
+                        .accessibilityHint("Open app settings")
                     }
                 }
 
@@ -100,20 +103,30 @@ struct HomeView: View {
                             } label: {
                                 Text("Cancel")
                             }
+                            .accessibilityLabel("Cancel deletion")
+                            .accessibilityHint("Exit delete mode without deleting")
                         } else {
                             HStack(spacing: 16) {
                                 Button {
+                                    // Create new preset by setting editingPreset to nil
                                     editingPreset = nil
-                                    showingPresetEditor = true
+                                    // Delay to ensure state updates
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                                        editingPreset = Preset.empty
+                                    }
                                 } label: {
                                     Image(systemName: "plus")
                                 }
+                                .accessibilityLabel("Create new workout")
+                                .accessibilityHint("Add a new workout preset")
 
                                 Button {
                                     isDeleteMode = true
                                 } label: {
                                     Image(systemName: "trash")
                                 }
+                                .accessibilityLabel("Delete workouts")
+                                .accessibilityHint("Enter delete mode to remove workouts")
                             }
                         }
                     }
@@ -124,8 +137,8 @@ struct HomeView: View {
                     .environment(presetStore)
                     .presentationDragIndicator(.visible)
             }
-            .sheet(isPresented: $showingPresetEditor) {
-                PresetEditorView(preset: editingPreset)
+            .sheet(item: $editingPreset) { preset in
+                PresetEditorView(preset: preset.id == Preset.empty.id ? nil : preset)
                     .environment(presetStore)
                     .presentationDragIndicator(.visible)
             }
@@ -179,12 +192,18 @@ struct HomeView: View {
                                 // First tap: select, second tap: edit
                                 if presetStore.selectedPresetId == preset.id {
                                     editingPreset = preset
-                                    showingPresetEditor = true
                                 } else {
                                     presetStore.selectPreset(preset)
                                 }
                             }
                         }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("\(preset.name). \(preset.intervalCount) intervals. \(preset.cycleDescription)")
+                        .accessibilityHint(isDeleteMode ?
+                            (presetsToDelete.contains(preset.id) ? "Tap to unmark for deletion" : "Tap to mark for deletion") :
+                            (presetStore.selectedPresetId == preset.id ? "Tap again to edit" : "Tap to select")
+                        )
+                        .accessibilityAddTraits(presetStore.selectedPresetId == preset.id ? [.isSelected] : [])
                     }
                 }
                 .padding(.horizontal)
@@ -204,6 +223,7 @@ struct HomeView: View {
                     lineWidth: 20
                 )
                 .frame(width: 280, height: 280)
+                .accessibilityHidden(true)
 
                 VStack(spacing: 8) {
                     // Current interval name
@@ -221,12 +241,18 @@ struct HomeView: View {
                         .monospacedDigit()
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(viewModel.currentInterval != nil ?
+                "\(viewModel.currentInterval!.title). Time remaining: \(viewModel.formattedRemainingTime)" :
+                "Timer: \(viewModel.formattedRemainingTime)"
+            )
 
             // Cycle info
             if viewModel.state.isActive {
                 Text(viewModel.cycleText)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.8))
+                    .accessibilityLabel(viewModel.cycleText)
             }
 
             // Next interval preview
@@ -239,10 +265,13 @@ struct HomeView: View {
                         .foregroundStyle(next.color)
                 }
                 .font(.subheadline)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Next: \(next.title)")
             } else if viewModel.state.isActive {
                 Text("Last interval")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.6))
+                    .accessibilityLabel("Last interval")
             }
 
             // Elapsed time
@@ -250,6 +279,7 @@ struct HomeView: View {
                 Text("Elapsed: \(viewModel.formattedElapsedTime)")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.5))
+                    .accessibilityLabel("Elapsed time: \(viewModel.formattedElapsedTime)")
             }
         }
     }
@@ -270,6 +300,8 @@ struct HomeView: View {
         .disabled(presetStore.selectedPreset == nil)
         .buttonStyle(.plain)
         .padding(.horizontal)
+        .accessibilityLabel("Start workout")
+        .accessibilityHint(presetStore.selectedPreset != nil ? "Begin \(presetStore.selectedPreset!.name) workout" : "Select a workout first")
     }
 
     private var activeControls: some View {
@@ -287,6 +319,8 @@ struct HomeView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Skip to previous interval")
+                .accessibilityHint("Go back to the start of the previous interval")
 
                 Spacer()
 
@@ -302,6 +336,8 @@ struct HomeView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(viewModel.state.isPaused ? "Resume workout" : "Pause workout")
+                .accessibilityHint(viewModel.state.isPaused ? "Continue the workout" : "Pause the timer")
 
                 Spacer()
 
@@ -316,6 +352,8 @@ struct HomeView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Skip to next interval")
+                .accessibilityHint("Jump to the start of the next interval")
             }
             .padding(.horizontal)
 
@@ -333,6 +371,8 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal)
+            .accessibilityLabel("Stop workout")
+            .accessibilityHint("End the current workout session")
         }
     }
 
@@ -404,36 +444,43 @@ struct PresetCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(alignment: .top) {
                 Text(preset.name)
                     .font(.headline)
                     .foregroundStyle(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .multilineTextAlignment(.leading)
 
-                Spacer()
+                Spacer(minLength: 8)
 
                 if isDeleteMode {
                     // Checkmark for deletion
                     Image(systemName: isMarkedForDeletion ? "checkmark.circle.fill" : "circle")
                         .font(.title3)
                         .foregroundStyle(isMarkedForDeletion ? .red : .white.opacity(0.5))
+                        .padding(.top, 2)
                 } else {
                     // Edit icon indicator
                     Image(systemName: "pencil.circle.fill")
                         .font(.caption)
                         .foregroundStyle(.white.opacity(0.5))
+                        .padding(.top, 4)
                 }
             }
 
             Text("\(preset.intervalCount) intervals")
                 .font(.caption)
                 .foregroundStyle(.white.opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(preset.cycleDescription)
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.6))
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
-        .frame(width: 160)
+        .frame(minWidth: 160, maxWidth: 200)
+        .frame(minHeight: 100)
         .background(
             isDeleteMode && isMarkedForDeletion
                 ? Color.red.opacity(0.3)
