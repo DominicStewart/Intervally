@@ -191,4 +191,12 @@ extension Preset {
 
     /// Sample preset for previews
     static let sample = defaults[0]
+
+    /// Empty preset used as sentinel for creating new presets
+    static let empty = Preset(
+        id: UUID(uuidString: "00000000-0000-0000-0000-000000000000")!,
+        name: "",
+        intervals: [],
+        cycleCount: nil
+    )
 }

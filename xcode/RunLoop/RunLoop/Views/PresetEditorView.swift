@@ -60,6 +60,14 @@ struct PresetEditorView: View {
                 Section("Preset Name") {
                     TextField("Name", text: $name)
                         .autocorrectionDisabled()
+                        .onChange(of: name) { _, newValue in
+                            if newValue.count > 20 {
+                                name = String(newValue.prefix(20))
+                            }
+                        }
+                    Text("\(name.count)/20")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 // Intervals
@@ -320,6 +328,14 @@ struct IntervalEditorView: View {
                 Section("Title") {
                     TextField("Title", text: $title)
                         .autocorrectionDisabled()
+                        .onChange(of: title) { _, newValue in
+                            if newValue.count > 20 {
+                                title = String(newValue.prefix(20))
+                            }
+                        }
+                    Text("\(title.count)/20")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
 
                 Section("Duration") {
