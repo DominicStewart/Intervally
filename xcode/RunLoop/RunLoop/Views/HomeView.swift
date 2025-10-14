@@ -11,7 +11,7 @@ struct HomeView: View {
 
     // MARK: - Constants
 
-    private let appVersion = "1.1.0" // Increment this with each change
+    private let appVersion = "1.2.5" // Increment this with each change
 
     // MARK: - Environment
 
@@ -156,7 +156,7 @@ struct HomeView: View {
                 Spacer()
 
                 if !isDeleteMode {
-                    Text("Tap to edit")
+                    Text("Tap again to edit")
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.5))
                 }
@@ -176,9 +176,13 @@ struct HomeView: View {
                             if isDeleteMode {
                                 togglePresetForDeletion(preset)
                             } else {
-                                presetStore.selectPreset(preset)
-                                editingPreset = preset
-                                showingPresetEditor = true
+                                // First tap: select, second tap: edit
+                                if presetStore.selectedPresetId == preset.id {
+                                    editingPreset = preset
+                                    showingPresetEditor = true
+                                } else {
+                                    presetStore.selectPreset(preset)
+                                }
                             }
                         }
                     }

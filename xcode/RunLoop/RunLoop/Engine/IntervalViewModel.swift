@@ -114,6 +114,9 @@ final class IntervalViewModel {
         // Setup audio session
         audioService.configureSession()
 
+        // Start silent audio loop to keep session alive in background
+        audioService.startSilentAudioLoop()
+
         // Count-in if enabled
         if countInEnabled {
             await performCountIn()
@@ -148,6 +151,7 @@ final class IntervalViewModel {
     func stop() async {
         engine.stop()
         await notificationService.cancelAll()
+        audioService.stopSilentAudioLoop()
         audioService.deactivateSession()
         currentPreset = nil
     }
@@ -241,6 +245,7 @@ final class IntervalViewModel {
         }
 
         await notificationService.cancelAll()
+        audioService.stopSilentAudioLoop()
         audioService.deactivateSession()
     }
 

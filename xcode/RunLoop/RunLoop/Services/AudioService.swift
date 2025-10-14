@@ -23,18 +23,19 @@ final class AudioService {
         do {
             let session = AVAudioSession.sharedInstance()
 
-            // Set category to playback with mixing enabled
-            // This allows background audio while respecting other apps
+            // Set category to playback with mixing and ducking enabled
+            // mixWithOthers: allows background audio
+            // duckOthers: lowers other audio when we play sounds
             try session.setCategory(
                 .playback,
                 mode: .default,
-                options: [.mixWithOthers]
+                options: [.mixWithOthers, .duckOthers]
             )
 
             // Activate session
             try session.setActive(true)
 
-            print("✅ Audio session configured for background playback")
+            print("✅ Audio session configured for background playback with ducking")
         } catch {
             print("❌ Failed to configure audio session: \(error.localizedDescription)")
         }
@@ -55,6 +56,9 @@ final class AudioService {
 
     /// Play the interval boundary chime
     func playChime() {
+        // Ensure session is active (critical for background playback)
+        ensureSessionActive()
+
         // Attempt to load chime.wav from bundle
         guard let soundURL = Bundle.main.url(forResource: "chime", withExtension: "wav") else {
             print("⚠️ chime.wav not found in bundle - using system sound as fallback")
@@ -75,6 +79,19 @@ final class AudioService {
         }
     }
 
+    /// Ensure audio session is active before playing sounds
+    private func ensureSessionActive() {
+        let session = AVAudioSession.sharedInstance()
+
+        do {
+            if !session.isOtherAudioPlaying {
+                try session.setActive(true)
+            }
+        } catch {
+            print("⚠️ Failed to activate audio session: \(error.localizedDescription)")
+        }
+    }
+
     /// Fallback: play system sound if custom chime unavailable
     private func playSystemSound() {
         // Use system sound ID 1007 (SMS alert tone)
@@ -86,11 +103,6 @@ final class AudioService {
     /// Play a silent audio loop to keep session alive in background
     /// Call this if you need to maintain timing without relying solely on notifications
     func startSilentAudioLoop() {
-        // Generate a short silent audio buffer and loop it
-        // This is optional - notifications provide a more battery-efficient approach
-        // Uncomment if you need guaranteed background timing:
-
-        /*
         guard let silenceURL = createSilenceAudioFile() else { return }
 
         do {
@@ -104,7 +116,6 @@ final class AudioService {
         } catch {
             print("❌ Failed to start silent loop: \(error.localizedDescription)")
         }
-        */
     }
 
     /// Stop silent audio loop

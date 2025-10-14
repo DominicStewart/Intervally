@@ -59,6 +59,7 @@ struct PresetEditorView: View {
                 // Preset Name
                 Section("Preset Name") {
                     TextField("Name", text: $name)
+                        .autocorrectionDisabled()
                 }
 
                 // Intervals
@@ -70,7 +71,8 @@ struct PresetEditorView: View {
                             IntervalRow(interval: interval)
                         }
                         .buttonStyle(.plain)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowInsets(EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16))
+                        .contentShape(Rectangle()) // Makes entire row tappable
                     }
                     .onDelete(perform: deleteIntervals)
                     .onMove(perform: moveIntervals)
@@ -135,6 +137,7 @@ struct PresetEditorView: View {
                     }
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle(isEditing ? "Edit Preset" : "New Preset")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -277,7 +280,7 @@ struct IntervalEditorView: View {
     @State private var title: String
     @State private var minutes: Int
     @State private var seconds: Int
-    @State private var selectedColor: Color
+    @State private var selectedColorHex: String
     @State private var voiceCue: String
 
     private let interval: Interval
@@ -292,7 +295,8 @@ struct IntervalEditorView: View {
         ("Teal", "#5AC8FA"),
         ("Blue", "#007AFF"),
         ("Purple", "#5856D6"),
-        ("Pink", "#FF2D55")
+        ("Pink", "#FF2D55"),
+        ("Gray", "#8E8E93")
     ]
 
     init(interval: Interval, onSave: @escaping (Interval) -> Void) {
@@ -303,8 +307,11 @@ struct IntervalEditorView: View {
         _title = State(initialValue: interval.title)
         _minutes = State(initialValue: totalSeconds / 60)
         _seconds = State(initialValue: totalSeconds % 60)
-        _selectedColor = State(initialValue: interval.color)
-        _voiceCue = State(initialValue: interval.voiceCue ?? interval.title)
+        _selectedColorHex = State(initialValue: interval.colorHex)
+
+        // Only populate voiceCue if it's different from title (i.e., user has customized it)
+        let isCustomVoiceCue = interval.voiceCue != nil && interval.voiceCue != interval.title
+        _voiceCue = State(initialValue: isCustomVoiceCue ? (interval.voiceCue ?? "") : "")
     }
 
     var body: some View {
@@ -312,6 +319,7 @@ struct IntervalEditorView: View {
             Form {
                 Section("Title") {
                     TextField("Title", text: $title)
+                        .autocorrectionDisabled()
                 }
 
                 Section("Duration") {
@@ -333,27 +341,48 @@ struct IntervalEditorView: View {
                 }
 
                 Section("Colour") {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 60))], spacing: 16) {
-                        ForEach(availableColors, id: \.hex) { colorInfo in
-                            Circle()
-                                .fill(Color(hex: colorInfo.hex))
-                                .frame(width: 50, height: 50)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.white, lineWidth: selectedColor.toHex() == colorInfo.hex ? 3 : 0)
-                                )
-                                .onTapGesture {
-                                    selectedColor = Color(hex: colorInfo.hex)
-                                }
+                    VStack(spacing: 20) {
+                        // First row (0-2)
+                        HStack(spacing: 20) {
+                            Spacer()
+                            colorCircle(for: availableColors[0])
+                            colorCircle(for: availableColors[1])
+                            colorCircle(for: availableColors[2])
+                            Spacer()
+                        }
+
+                        // Second row (3-5)
+                        HStack(spacing: 20) {
+                            Spacer()
+                            colorCircle(for: availableColors[3])
+                            colorCircle(for: availableColors[4])
+                            colorCircle(for: availableColors[5])
+                            Spacer()
+                        }
+
+                        // Third row (6-8)
+                        HStack(spacing: 20) {
+                            Spacer()
+                            colorCircle(for: availableColors[6])
+                            colorCircle(for: availableColors[7])
+                            colorCircle(for: availableColors[8])
+                            Spacer()
                         }
                     }
-                    .padding(.vertical, 8)
+                    .padding(.vertical, 12)
                 }
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .id("color-picker") // Prevent unnecessary re-renders
 
                 Section("Voice Cue") {
-                    TextField("Voice Cue", text: $voiceCue)
+                    TextField("Same as title", text: $voiceCue)
+                        .autocorrectionDisabled()
+                    Text("Leave empty to use the interval title")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
             .navigationTitle("Edit Interval")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -379,18 +408,52 @@ struct IntervalEditorView: View {
         !title.isEmpty && (minutes > 0 || seconds > 0)
     }
 
+    @ViewBuilder
+    private func colorCircle(for colorInfo: (name: String, hex: String)) -> some View {
+        ColorCircleButton(
+            colorInfo: colorInfo,
+            selectedColorHex: $selectedColorHex
+        )
+    }
+
     private func save() {
         let duration = Double(minutes * 60 + seconds)
         let updated = Interval(
             id: interval.id,
             title: title,
             duration: duration,
-            colorHex: selectedColor.toHex() ?? "#007AFF",
+            colorHex: selectedColorHex,
             voiceCue: voiceCue.isEmpty ? nil : voiceCue
         )
 
         onSave(updated)
         dismiss()
+    }
+}
+
+// MARK: - Color Circle Button
+
+struct ColorCircleButton: View {
+    let colorInfo: (name: String, hex: String)
+    @Binding var selectedColorHex: String
+
+    var body: some View {
+        let isSelected = selectedColorHex == colorInfo.hex
+
+        ZStack {
+            Circle()
+                .fill(Color(hex: colorInfo.hex))
+                .frame(width: isSelected ? 65 : 50, height: isSelected ? 65 : 50)
+                .overlay(
+                    Circle()
+                        .stroke(Color.white, lineWidth: isSelected ? 3 : 0)
+                )
+        }
+        .frame(width: 70, height: 70)
+        .background(Color.clear)
+        .onTapGesture {
+            selectedColorHex = colorInfo.hex
+        }
     }
 }
 
