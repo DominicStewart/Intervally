@@ -9,6 +9,9 @@
 import Foundation
 import SwiftUI
 import Combine
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
 
 /// Main view model for interval timer sessions
 @MainActor
@@ -22,6 +25,7 @@ final class IntervalViewModel {
     private let speechService = SpeechService()
     private let hapticsService = HapticsService()
     private let notificationService = NotificationService()
+    private let watchService = WatchConnectivityService.shared
 
     // MARK: - Published State (via @Observable)
 
@@ -46,7 +50,13 @@ final class IntervalViewModel {
     // MARK: - Private Properties
 
     private var cancellables = Set<AnyCancellable>()
+    private var liveActivityUpdateTimer: Timer?
+    private var watchUpdateTimer: Timer?
     private var currentPreset: Preset?
+    #if canImport(ActivityKit)
+    private var currentActivity: Activity<IntervalActivityAttributes>?
+    #endif
+    private var currentIntervalIndex: Int = 0
 
     // MARK: - Initialization
 
@@ -63,7 +73,10 @@ final class IntervalViewModel {
         // Subscribe to all engine state changes
         engine.$state
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] value in self?.state = value }
+            .sink { [weak self] value in
+                self?.state = value
+                // Don't send watch updates here - they'll be sent periodically via timer
+            }
             .store(in: &cancellables)
 
         engine.$currentInterval
@@ -125,6 +138,25 @@ final class IntervalViewModel {
         // Start engine
         engine.start(preset: preset)
 
+        // Send full workout structure to Apple Watch
+        let intervalsData = preset.intervals.map { interval in
+            [
+                "title": interval.title,
+                "duration": interval.duration,
+                "color": interval.colorHex
+            ] as [String: Any]
+        }
+        watchService.sendWorkoutStarted(
+            presetName: preset.name,
+            intervals: intervalsData,
+            cycleCount: preset.cycleCount
+        )
+
+        // Watch runs autonomously - no need for periodic updates
+        // Only send pause/resume/stop commands as needed
+
+        // Live Activity will be started on first interval transition when we have valid data
+
         // No notifications scheduled - app must be running (foreground or background)
     }
 
@@ -132,11 +164,31 @@ final class IntervalViewModel {
     func pause() async {
         engine.pause()
         await notificationService.cancelAll()
+        watchService.sendTimerUpdate(
+            intervalTitle: currentInterval?.title,
+            remainingTime: remainingTime,
+            isActive: true,
+            isPaused: true,
+            color: currentInterval?.colorHex
+        )
+        #if canImport(ActivityKit)
+        updateLiveActivity()
+        #endif
     }
 
     /// Resume the paused session
     func resume() async {
         engine.resume()
+        watchService.sendTimerUpdate(
+            intervalTitle: currentInterval?.title,
+            remainingTime: remainingTime,
+            isActive: true,
+            isPaused: false,
+            color: currentInterval?.colorHex
+        )
+        #if canImport(ActivityKit)
+        updateLiveActivity()
+        #endif
     }
 
     /// Stop the current session
@@ -145,6 +197,10 @@ final class IntervalViewModel {
         await notificationService.cancelAll()
         audioService.stopSilentAudioLoop()
         audioService.deactivateSession()
+        watchService.sendWorkoutStopped()
+        #if canImport(ActivityKit)
+        endLiveActivity()
+        #endif
         currentPreset = nil
     }
 
@@ -206,6 +262,20 @@ final class IntervalViewModel {
     private func handleIntervalTransition(_ interval: Interval, intervalIndex: Int, cycleIndex: Int) async {
         print("🔄 Transition: \(interval.title) (Interval \(intervalIndex), Cycle \(cycleIndex + 1))")
 
+        // Track current interval index
+        currentIntervalIndex = intervalIndex
+
+        // Start or update Live Activity
+        #if canImport(ActivityKit)
+        if currentActivity == nil, let preset = currentPreset {
+            startLiveActivity(preset: preset)
+        } else {
+            // Add delay to avoid iOS rate limiting
+            try? await Task.sleep(for: .milliseconds(500))
+            updateLiveActivity()
+        }
+        #endif
+
         // Play alerts
         if soundsEnabled {
             audioService.playChime()
@@ -218,6 +288,8 @@ final class IntervalViewModel {
         if hapticsEnabled {
             hapticsService.trigger(pattern: .intervalTransition)
         }
+
+        // Watch runs autonomously - no need to send transition updates
     }
 
     private func handleSessionFinish() async {
@@ -239,6 +311,9 @@ final class IntervalViewModel {
         await notificationService.cancelAll()
         audioService.stopSilentAudioLoop()
         audioService.deactivateSession()
+        #if canImport(ActivityKit)
+        endLiveActivity()
+        #endif
     }
 
     private func performCountIn() async {
@@ -262,6 +337,170 @@ final class IntervalViewModel {
         let secs = Int(seconds) % 60
         return String(format: "%d:%02d", minutes, secs)
     }
+
+    /// Send current state to Apple Watch (called periodically by timer)
+    private func sendWatchUpdate() {
+        watchService.sendTimerUpdate(
+            intervalTitle: currentInterval?.title,
+            remainingTime: remainingTime,
+            isActive: state.isActive,
+            isPaused: state.isPaused,
+            color: currentInterval?.colorHex
+        )
+    }
+
+    /// Start timer for periodic watch updates (avoids iOS throttling)
+    private func startWatchUpdateTimer() {
+        stopWatchUpdateTimer()
+
+        // Update every 2 seconds to avoid updateApplicationContext throttling
+        watchUpdateTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor in
+                self.sendWatchUpdate()
+            }
+        }
+        print("⏰ Watch update timer started (2s interval)")
+    }
+
+    /// Stop the watch update timer
+    private func stopWatchUpdateTimer() {
+        watchUpdateTimer?.invalidate()
+        watchUpdateTimer = nil
+    }
+
+    // MARK: - Live Activity
+
+    #if canImport(ActivityKit)
+    /// Start a Live Activity for the current workout
+    private func startLiveActivity(preset: Preset) {
+        print("🚀 Attempting to start Live Activity for: \(preset.name)")
+
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            print("⚠️ Live Activities not enabled in settings")
+            return
+        }
+
+        print("✅ Live Activities are enabled")
+
+        let attributes = IntervalActivityAttributes(presetName: preset.name)
+
+        let initialState = IntervalActivityAttributes.ContentState(
+            intervalTitle: currentInterval?.title ?? "Ready",
+            intervalEndDate: Date().addingTimeInterval(remainingTime),
+            intervalColor: currentInterval?.colorHex ?? "#007AFF",
+            isPaused: false,
+            currentIntervalIndex: 0,
+            totalIntervals: preset.intervalCount,
+            currentCycle: 1,
+            totalCycles: preset.cycleCount ?? 1,
+            updateTimestamp: Date()
+        )
+
+        print("📊 Initial state - Title: \(initialState.intervalTitle), Elapsed: \(elapsedTime)s")
+
+        do {
+            let activity = try Activity.request(
+                attributes: attributes,
+                content: .init(state: initialState, staleDate: nil)
+            )
+            currentActivity = activity
+            print("✅ Live Activity started successfully")
+            print("   Activity ID: \(activity.id)")
+            print("   Activity state: \(activity.activityState)")
+
+            // Don't start periodic timer - only update on actual interval changes
+        } catch {
+            print("❌ Failed to start Live Activity")
+            print("   Error: \(error)")
+            print("   Error details: \((error as NSError).userInfo)")
+        }
+    }
+
+    /// Update the Live Activity with current state
+    private func updateLiveActivity() {
+        guard let activity = currentActivity else {
+            print("❌ No activity to update")
+            return
+        }
+
+        guard activity.activityState == .active else {
+            print("❌ Activity not active, state: \(activity.activityState)")
+            return
+        }
+
+        guard let preset = currentPreset else {
+            print("❌ Missing preset")
+            return
+        }
+
+        let updatedState = IntervalActivityAttributes.ContentState(
+            intervalTitle: currentInterval?.title ?? "Ready",
+            intervalEndDate: Date().addingTimeInterval(remainingTime),
+            intervalColor: currentInterval?.colorHex ?? "#007AFF",
+            isPaused: state.isPaused,
+            currentIntervalIndex: currentIntervalIndex,
+            totalIntervals: preset.intervalCount,
+            currentCycle: currentCycle,
+            totalCycles: totalCycles ?? 1,
+            updateTimestamp: Date()
+        )
+
+        print("📲 Attempting update - Activity state: \(activity.activityState), Title: \(updatedState.intervalTitle)")
+        print("   Remaining time: \(remainingTime)s, End date: \(updatedState.intervalEndDate)")
+        print("   Update timestamp: \(updatedState.updateTimestamp)")
+
+        Task {
+            let content = ActivityContent<IntervalActivityAttributes.ContentState>(
+                state: updatedState,
+                staleDate: nil
+            )
+
+            await activity.update(content)
+
+            print("✅ Live Activity updated successfully: \(updatedState.intervalTitle)")
+            print("   Activity ID: \(activity.id)")
+            print("   Activity state after update: \(activity.activityState)")
+
+            // Force a small delay and check state again
+            try? await Task.sleep(for: .milliseconds(100))
+            print("   Activity state 100ms later: \(activity.activityState)")
+        }
+    }
+
+    /// End the Live Activity
+    private func endLiveActivity() {
+        guard let activity = currentActivity else { return }
+
+        Task {
+            await activity.end(nil, dismissalPolicy: .immediate)
+            currentActivity = nil
+            print("✅ Live Activity ended")
+        }
+    }
+
+    /// Start timer to periodically update Live Activity (prevents content expiration)
+    private func startLiveActivityUpdateTimer() {
+        stopLiveActivityUpdateTimer()
+
+        liveActivityUpdateTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor in
+                await MainActor.run {
+                    self.updateLiveActivity()
+                }
+            }
+        }
+        print("⏰ Live Activity update timer started (30s interval)")
+    }
+
+    /// Stop the Live Activity update timer
+    private func stopLiveActivityUpdateTimer() {
+        liveActivityUpdateTimer?.invalidate()
+        liveActivityUpdateTimer = nil
+        print("⏰ Live Activity update timer stopped")
+    }
+    #endif
 }
 
 // MARK: - Array Extension

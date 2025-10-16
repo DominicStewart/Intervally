@@ -11,7 +11,7 @@ struct HomeView: View {
 
     // MARK: - Constants
 
-    private let appVersion = "1.4.3" // Increment this with each change
+    private let appVersion = "1.5.0" // Increment this with each change
 
     // MARK: - Environment
 
