@@ -33,9 +33,15 @@ struct SettingsView: View {
                     ))
                     .tint(.blue)
 
-                    Toggle("Haptics", isOn: Binding(
+                    Toggle("iPhone Haptics", isOn: Binding(
                         get: { presetStore.hapticsEnabled },
                         set: { presetStore.hapticsEnabled = $0 }
+                    ))
+                    .tint(.blue)
+
+                    Toggle("Watch Haptics", isOn: Binding(
+                        get: { presetStore.watchHapticsEnabled },
+                        set: { presetStore.watchHapticsEnabled = $0 }
                     ))
                     .tint(.blue)
                 }

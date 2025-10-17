@@ -78,6 +78,7 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         guard WCSession.default.activationState == .activated else { return }
 
         let context: [String: Any] = [
+            "type": "timerUpdate",  // Add type to prevent overwriting workout start messages
             "intervalTitle": intervalTitle ?? "",
             "remainingTime": remainingTime,
             "isActive": isActive,
@@ -88,14 +89,23 @@ final class WatchConnectivityService: NSObject, ObservableObject {
 
         do {
             try WCSession.default.updateApplicationContext(context)
-            print("📲 Updated watch context")
+            print("📲 Updated watch context (timer update)")
         } catch {
             print("❌ Failed to update watch context: \(error.localizedDescription)")
         }
     }
 
     /// Send workout started event with full workout structure
-    func sendWorkoutStarted(presetName: String, intervals: [[String: Any]], cycleCount: Int?) {
+    func sendWorkoutStarted(
+        presetName: String,
+        intervals: [[String: Any]],
+        cycleCount: Int?,
+        watchHapticsEnabled: Bool,
+        enableHealthKitWorkout: Bool,
+        currentIntervalIndex: Int,
+        currentCycle: Int,
+        remainingTime: TimeInterval
+    ) {
         guard WCSession.default.activationState == .activated else {
             print("❌ WCSession not activated, state: \(WCSession.default.activationState.rawValue)")
             return
@@ -111,7 +121,12 @@ final class WatchConnectivityService: NSObject, ObservableObject {
             "type": "workoutStarted",
             "presetName": presetName,
             "intervals": intervals,
-            "startTime": Date().timeIntervalSince1970
+            "startTime": Date().timeIntervalSince1970,
+            "watchHapticsEnabled": watchHapticsEnabled,
+            "enableHealthKitWorkout": enableHealthKitWorkout,
+            "currentIntervalIndex": currentIntervalIndex,
+            "currentCycle": currentCycle,
+            "remainingTime": remainingTime
         ]
 
         if let cycleCount = cycleCount {

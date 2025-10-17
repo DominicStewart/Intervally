@@ -20,6 +20,7 @@ struct PresetEditorView: View {
     @State private var intervals: [Interval]
     @State private var cycleCount: Int?
     @State private var isInfinite: Bool
+    @State private var enableHealthKitWorkout: Bool
 
     @State private var editingInterval: Interval?
 
@@ -37,6 +38,7 @@ struct PresetEditorView: View {
             _intervals = State(initialValue: preset.intervals)
             _cycleCount = State(initialValue: preset.cycleCount)
             _isInfinite = State(initialValue: preset.cycleCount == nil)
+            _enableHealthKitWorkout = State(initialValue: preset.enableHealthKitWorkout)
         } else {
             // Creating new preset
             isEditing = false
@@ -48,6 +50,7 @@ struct PresetEditorView: View {
             ])
             _cycleCount = State(initialValue: 6)
             _isInfinite = State(initialValue: false)
+            _enableHealthKitWorkout = State(initialValue: true)
         }
     }
 
@@ -117,6 +120,16 @@ struct PresetEditorView: View {
                             }
                         }
                     }
+                }
+
+                // Apple Watch Settings
+                Section {
+                    Toggle("Track as HealthKit Workout", isOn: $enableHealthKitWorkout)
+                        .tint(.blue)
+                } header: {
+                    Text("Apple Watch")
+                } footer: {
+                    Text("Enable to track this as a workout in the Health app on your Apple Watch. Disable for non-fitness activities like Pomodoro timers or cooking.")
                 }
 
                 // Summary
@@ -211,7 +224,8 @@ struct PresetEditorView: View {
             id: originalPresetId ?? UUID(),
             name: name,
             intervals: intervals,
-            cycleCount: isInfinite ? nil : cycleCount
+            cycleCount: isInfinite ? nil : cycleCount,
+            enableHealthKitWorkout: enableHealthKitWorkout
         )
 
         if isEditing {

@@ -36,6 +36,11 @@ final class PresetStore {
         set { UserDefaults.standard.set(newValue, forKey: "hapticsEnabled") }
     }
 
+    var watchHapticsEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: "watchHapticsEnabled") || !UserDefaults.standard.dictionaryRepresentation().keys.contains("watchHapticsEnabled") }
+        set { UserDefaults.standard.set(newValue, forKey: "watchHapticsEnabled") }
+    }
+
     var speechRate: Double {
         get {
             if UserDefaults.standard.dictionaryRepresentation().keys.contains("speechRate") {
