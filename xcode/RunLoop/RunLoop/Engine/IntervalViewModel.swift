@@ -22,6 +22,7 @@ final class IntervalViewModel {
     private let speechService = SpeechService()
     private let hapticsService = HapticsService()
     private let notificationService = NotificationService()
+    private let watchService = WatchConnectivityService.shared
 
     // MARK: - Published State (via @Observable)
 
@@ -33,6 +34,8 @@ final class IntervalViewModel {
     var progress: Double = 0
     var currentCycle: Int = 0
     var totalCycles: Int?
+    var countdownNumber: Int? = nil  // For visual countdown (3, 2, 1)
+    var isCountingIn: Bool = false  // True during countdown phase
 
     // MARK: - Settings (persisted via AppStorage)
 
@@ -40,13 +43,15 @@ final class IntervalViewModel {
     var voiceEnabled: Bool = true
     var hapticsEnabled: Bool = true
     var speechRate: Double = 0.5 // AVSpeechUtterance rate
-    var countInEnabled: Bool = false
+    var countInEnabled: Bool = true  // Enable countdown by default
     var keepScreenAwake: Bool = false
 
     // MARK: - Private Properties
 
     private var cancellables = Set<AnyCancellable>()
+    private var watchUpdateTimer: Timer?
     private var currentPreset: Preset?
+    private var currentIntervalIndex: Int = 0
 
     // MARK: - Initialization
 
@@ -55,15 +60,30 @@ final class IntervalViewModel {
         setupAudioSession()
         requestNotificationPermission()
         observeEngine()
+        setupWatchSyncObserver()
     }
 
     // MARK: - Engine Observation
+
+    private func setupWatchSyncObserver() {
+        // Listen for Watch sync requests
+        NotificationCenter.default.publisher(for: .watchRequestedSync)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                print("📱 Responding to Watch sync request")
+                self?.sendWatchUpdate()
+            }
+            .store(in: &cancellables)
+    }
 
     private func observeEngine() {
         // Subscribe to all engine state changes
         engine.$state
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] value in self?.state = value }
+            .sink { [weak self] value in
+                self?.state = value
+                // Don't send watch updates here - they'll be sent periodically via timer
+            }
             .store(in: &cancellables)
 
         engine.$currentInterval
@@ -125,18 +145,47 @@ final class IntervalViewModel {
         // Start engine
         engine.start(preset: preset)
 
-        // No notifications scheduled - app must be running (foreground or background)
+        // Send full workout structure to Apple Watch
+        let intervalsData = preset.intervals.map { interval in
+            [
+                "title": interval.title,
+                "duration": interval.duration,
+                "color": interval.colorHex
+            ] as [String: Any]
+        }
+        watchService.sendWorkoutStarted(
+            presetName: preset.name,
+            intervals: intervalsData,
+            cycleCount: preset.cycleCount
+        )
+
+        // Start periodic watch sync (every 10 seconds for late-join scenarios)
+        startWatchUpdateTimer()
     }
 
     /// Pause the current session
     func pause() async {
         engine.pause()
         await notificationService.cancelAll()
+        watchService.sendTimerUpdate(
+            intervalTitle: currentInterval?.title,
+            remainingTime: remainingTime,
+            isActive: true,
+            isPaused: true,
+            color: currentInterval?.colorHex
+        )
     }
 
     /// Resume the paused session
     func resume() async {
         engine.resume()
+        watchService.sendTimerUpdate(
+            intervalTitle: currentInterval?.title,
+            remainingTime: remainingTime,
+            isActive: true,
+            isPaused: false,
+            color: currentInterval?.colorHex
+        )
     }
 
     /// Stop the current session
@@ -145,17 +194,37 @@ final class IntervalViewModel {
         await notificationService.cancelAll()
         audioService.stopSilentAudioLoop()
         audioService.deactivateSession()
+        stopWatchUpdateTimer()  // Stop periodic watch updates
+        watchService.sendWorkoutStopped()
         currentPreset = nil
+
+        // Reset countdown state if stopped during countdown
+        isCountingIn = false
+        countdownNumber = nil
     }
 
     /// Skip to next interval
     func skipForward() {
         engine.skipForward()
+
+        // Send immediate update to Watch with new interval
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100)) // Wait for engine to update
+            sendWatchUpdate()
+            print("📱 Sent skip forward update to Watch")
+        }
     }
 
     /// Skip to previous interval
     func skipBackward() {
         engine.skipBackward()
+
+        // Send immediate update to Watch with new interval
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100)) // Wait for engine to update
+            sendWatchUpdate()
+            print("📱 Sent skip backward update to Watch")
+        }
     }
 
     // MARK: - Formatted Helpers
@@ -206,6 +275,9 @@ final class IntervalViewModel {
     private func handleIntervalTransition(_ interval: Interval, intervalIndex: Int, cycleIndex: Int) async {
         print("🔄 Transition: \(interval.title) (Interval \(intervalIndex), Cycle \(cycleIndex + 1))")
 
+        // Track current interval index
+        currentIntervalIndex = intervalIndex
+
         // Play alerts
         if soundsEnabled {
             audioService.playChime()
@@ -218,6 +290,13 @@ final class IntervalViewModel {
         if hapticsEnabled {
             hapticsService.trigger(pattern: .intervalTransition)
         }
+
+        // Send interval transition to Watch (for sync if Watch app opened mid-workout)
+        watchService.sendIntervalTransition(
+            intervalTitle: interval.title,
+            remainingTime: remainingTime,
+            color: interval.colorHex
+        )
     }
 
     private func handleSessionFinish() async {
@@ -242,11 +321,17 @@ final class IntervalViewModel {
     }
 
     private func performCountIn() async {
+        // Enter countdown mode (triggers UI transition to workout view)
+        isCountingIn = true
+
         // Give audio session a moment to initialize
         try? await Task.sleep(for: .milliseconds(200))
 
         // Simple count-in: 3, 2, 1
         for count in (1...3).reversed() {
+            // Show countdown number visually
+            countdownNumber = count
+
             if voiceEnabled {
                 speechService.speak("\(count)", rate: Float(speechRate))
             }
@@ -255,12 +340,47 @@ final class IntervalViewModel {
             }
             try? await Task.sleep(for: .seconds(1))
         }
+
+        // Clear countdown number and exit countdown mode
+        countdownNumber = nil
+        isCountingIn = false
     }
 
     private func formatTime(_ seconds: TimeInterval) -> String {
         let minutes = Int(seconds) / 60
         let secs = Int(seconds) % 60
         return String(format: "%d:%02d", minutes, secs)
+    }
+
+    /// Send current state to Apple Watch (called periodically by timer)
+    func sendWatchUpdate() {
+        watchService.sendTimerUpdate(
+            intervalTitle: currentInterval?.title,
+            remainingTime: remainingTime,
+            isActive: state.isActive,
+            isPaused: state.isPaused,
+            color: currentInterval?.colorHex
+        )
+    }
+
+    /// Start timer for periodic watch updates (for late-join sync)
+    private func startWatchUpdateTimer() {
+        stopWatchUpdateTimer()
+
+        // Update every 10 seconds for late-join scenarios (when Watch app opens mid-workout)
+        watchUpdateTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            Task { @MainActor in
+                self.sendWatchUpdate()
+            }
+        }
+        print("⏰ Watch update timer started (10s interval)")
+    }
+
+    /// Stop the watch update timer
+    private func stopWatchUpdateTimer() {
+        watchUpdateTimer?.invalidate()
+        watchUpdateTimer = nil
     }
 }
 

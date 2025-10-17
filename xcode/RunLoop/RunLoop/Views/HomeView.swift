@@ -11,7 +11,7 @@ struct HomeView: View {
 
     // MARK: - Constants
 
-    private let appVersion = "1.4.3" // Increment this with each change
+    private let appVersion = "1.6.0" // Increment this with each change
 
     // MARK: - Environment
 
@@ -35,8 +35,8 @@ struct HomeView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 20) {
-                    // Preset selector
-                    if !viewModel.state.isActive {
+                    // Preset selector (hidden during countdown and workout)
+                    if !viewModel.state.isActive && !viewModel.isCountingIn {
                         presetSelector
                             .padding(.top)
                             .transition(.opacity.combined(with: .scale(scale: 0.95)))
@@ -50,7 +50,7 @@ struct HomeView: View {
                     Spacer()
 
                     // Controls
-                    if viewModel.state.isActive {
+                    if viewModel.state.isActive || viewModel.isCountingIn {
                         activeControls
                             .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     } else {
@@ -60,8 +60,8 @@ struct HomeView: View {
 
                     Spacer()
 
-                    // Version number at bottom
-                    if !viewModel.state.isActive {
+                    // Version number at bottom (hidden during countdown and workout)
+                    if !viewModel.state.isActive && !viewModel.isCountingIn {
                         Text("v\(appVersion)")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.4))
@@ -69,6 +69,7 @@ struct HomeView: View {
                     }
                 }
                 .animation(.snappy(duration: 0.25), value: viewModel.state)
+                .animation(.snappy(duration: 0.25), value: viewModel.isCountingIn)
                 .padding()
             }
             .navigationTitle("Intervally")
@@ -151,7 +152,15 @@ struct HomeView: View {
     // MARK: - Components
 
     private var backgroundGradient: some View {
-        let color = viewModel.currentInterval?.color ?? Color.blue.opacity(0.3)
+        // Use grey during countdown, then interval color
+        let color: Color = {
+            if viewModel.isCountingIn {
+                return Color.gray.opacity(0.3)
+            } else {
+                return viewModel.currentInterval?.color ?? Color.blue.opacity(0.3)
+            }
+        }()
+
         return LinearGradient(
             colors: [color.opacity(0.3), Color.black.opacity(0.8)],
             startPoint: .top,
@@ -226,19 +235,27 @@ struct HomeView: View {
                 .accessibilityHidden(true)
 
                 VStack(spacing: 8) {
-                    // Current interval name
-                    if let interval = viewModel.currentInterval {
-                        Text(interval.title)
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                    // Show countdown overlay if active
+                    if let countdownNum = viewModel.countdownNumber {
+                        Text("\(countdownNum)")
+                            .font(.system(size: 120, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
-                    }
+                            .transition(.scale.combined(with: .opacity))
+                    } else {
+                        // Current interval name
+                        if let interval = viewModel.currentInterval {
+                            Text(interval.title)
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.white)
+                        }
 
-                    // Remaining time
-                    Text(viewModel.formattedRemainingTime)
-                        .font(.system(size: 72, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .monospacedDigit()
+                        // Remaining time
+                        Text(viewModel.formattedRemainingTime)
+                            .font(.system(size: 72, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .monospacedDigit()
+                    }
                 }
             }
             .accessibilityElement(children: .combine)
@@ -306,7 +323,7 @@ struct HomeView: View {
 
     private var activeControls: some View {
         VStack(spacing: 16) {
-            // Skip buttons
+            // Skip buttons (disabled during countdown)
             HStack(spacing: 20) {
                 Button {
                     viewModel.skipBackward()
@@ -318,13 +335,15 @@ struct HomeView: View {
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
+                .disabled(viewModel.isCountingIn)
+                .opacity(viewModel.isCountingIn ? 0.5 : 1.0)
                 .buttonStyle(.plain)
                 .accessibilityLabel("Skip to previous interval")
                 .accessibilityHint("Go back to the start of the previous interval")
 
                 Spacer()
 
-                // Pause/Resume button
+                // Pause/Resume button (disabled during countdown)
                 Button {
                     togglePause()
                 } label: {
@@ -335,6 +354,8 @@ struct HomeView: View {
                         .background(Color.orange)
                         .clipShape(Circle())
                 }
+                .disabled(viewModel.isCountingIn)
+                .opacity(viewModel.isCountingIn ? 0.5 : 1.0)
                 .buttonStyle(.plain)
                 .accessibilityLabel(viewModel.state.isPaused ? "Resume workout" : "Pause workout")
                 .accessibilityHint(viewModel.state.isPaused ? "Continue the workout" : "Pause the timer")
@@ -351,6 +372,8 @@ struct HomeView: View {
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
+                .disabled(viewModel.isCountingIn)
+                .opacity(viewModel.isCountingIn ? 0.5 : 1.0)
                 .buttonStyle(.plain)
                 .accessibilityLabel("Skip to next interval")
                 .accessibilityHint("Jump to the start of the next interval")
