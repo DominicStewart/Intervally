@@ -16,7 +16,7 @@ This setup enables **always-on display** for your workout using HealthKit workou
 
 ### A. Add HealthKit Capability to Watch App
 
-1. Select **Intervally Watch Watch App** target in Xcode
+1. Select **Intervally Watch App** target in Xcode
 2. Go to **Signing & Capabilities** tab
 3. Click **+ Capability**
 4. Search for and add **HealthKit**
@@ -24,10 +24,10 @@ This setup enables **always-on display** for your workout using HealthKit workou
 
 ### B. Assign Entitlements File
 
-1. Still in **Intervally Watch Watch App** target
+1. Still in **Intervally Watch App** target
 2. Go to **Build Settings** tab
 3. Search for "Code Signing Entitlements"
-4. Set value to: `Intervally Watch Watch App/Intervally_Watch.entitlements`
+4. Set value to: `Intervally Watch App/Intervally_Watch.entitlements`
 
 ### C. Configure Info.plist
 
@@ -39,15 +39,15 @@ The Watch app's Info.plist should have these keys:
 
 ### D. Add WatchConnectivity Configuration
 
-#### For iOS App (RunLoop target):
-1. Select RunLoop target → Info tab
+#### For iOS App (Intervally iOS App target):
+1. Select "Intervally iOS App" target → Info tab
 2. Add a new row:
    - Key: `WKCompanionAppBundleIdentifier`
    - Type: String
    - Value: `com.dominic.intervally`
 
 #### For Watch App target:
-1. Select Intervally Watch target → Info tab
+1. Select "Intervally Watch App" target → Info tab
 2. Add a new row:
    - Key: `WKAppBundleIdentifier`
    - Type: String

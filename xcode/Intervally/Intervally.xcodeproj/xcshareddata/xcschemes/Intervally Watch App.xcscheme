@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "DA74D44E2E9F58D2000CA047"
-               BuildableName = "Intervally Watch Watch App.app"
-               BlueprintName = "Intervally Watch Watch App"
-               ReferencedContainer = "container:RunLoop.xcodeproj">
+               BuildableName = "Intervally Watch App.app"
+               BlueprintName = "Intervally Watch App"
+               ReferencedContainer = "container:Intervally.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
          <BuildActionEntry
@@ -30,9 +30,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "DA74D3632E9BF93B000CA047"
-               BuildableName = "RunLoop.app"
-               BlueprintName = "RunLoop"
-               ReferencedContainer = "container:RunLoop.xcodeproj">
+               BuildableName = "Intervally iOS App.app"
+               BlueprintName = "Intervally iOS App"
+               ReferencedContainer = "container:Intervally.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -59,9 +59,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DA74D44E2E9F58D2000CA047"
-            BuildableName = "Intervally Watch Watch App.app"
-            BlueprintName = "Intervally Watch Watch App"
-            ReferencedContainer = "container:RunLoop.xcodeproj">
+            BuildableName = "Intervally Watch App.app"
+            BlueprintName = "Intervally Watch App"
+            ReferencedContainer = "container:Intervally.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -76,9 +76,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "DA74D44E2E9F58D2000CA047"
-            BuildableName = "Intervally Watch Watch App.app"
-            BlueprintName = "Intervally Watch Watch App"
-            ReferencedContainer = "container:RunLoop.xcodeproj">
+            BuildableName = "Intervally Watch App.app"
+            BlueprintName = "Intervally Watch App"
+            ReferencedContainer = "container:Intervally.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

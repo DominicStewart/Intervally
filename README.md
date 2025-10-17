@@ -74,9 +74,9 @@ Intervally uses a multi-strategy approach for background accuracy:
 All code is located in the `xcode/` directory:
 
 ```
-xcode/RunLoop/
-├── RunLoop/                              # iPhone App
-│   ├── RunLoopApp.swift                  # App entry point
+xcode/Intervally/
+├── Intervally iOS App/                   # iPhone App
+│   ├── IntervallyApp.swift               # App entry point
 │   ├── Models/
 │   │   ├── Interval.swift                # Interval model
 │   │   └── Preset.swift                  # Preset model with enableHealthKitWorkout
@@ -99,14 +99,14 @@ xcode/RunLoop/
 │   │       └── ProgressRing.swift        # Circular progress indicator
 │   └── Assets.xcassets/
 │
-├── Intervally Watch Watch App/          # Apple Watch App
+├── Intervally Watch App/                # Apple Watch App
 │   ├── Intervally_WatchApp.swift        # Watch app entry point
 │   ├── ContentView.swift                # Watch UI with LIVE indicator
 │   ├── WatchConnectivityManager.swift   # Watch-iPhone communication
 │   ├── WorkoutManager.swift             # HealthKit workout session management
 │   └── Assets.xcassets/
 │
-└── RunLoop.xcodeproj                    # Xcode project
+└── Intervally.xcodeproj                 # Xcode project
 ```
 
 ## Architecture
@@ -176,13 +176,13 @@ xcode/RunLoop/
 1. **Open Project**
 
    ```bash
-   cd xcode/RunLoop
-   open RunLoop.xcodeproj
+   cd xcode/Intervally
+   open Intervally.xcodeproj
    ```
 
 2. **Configure Signing**
 
-   - Select RunLoop target → Signing & Capabilities
+   - Select "Intervally iOS App" target → Signing & Capabilities
    - Choose your Team
    - Update Bundle Identifier if needed
 
