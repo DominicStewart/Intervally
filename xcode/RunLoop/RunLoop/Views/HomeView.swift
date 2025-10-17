@@ -11,12 +11,12 @@ struct HomeView: View {
 
     // MARK: - Constants
 
-    private let appVersion = "1.6.0" // Increment this with each change
+    private let appVersion = "2.0.0" // Increment this with each change
 
     // MARK: - Environment
 
     @Environment(PresetStore.self) private var presetStore
-    @State private var viewModel = IntervalViewModel()
+    @State private var viewModel: IntervalViewModel?
 
     // MARK: - State
 
@@ -28,15 +28,29 @@ struct HomeView: View {
     // MARK: - Body
 
     var body: some View {
+        Group {
+            if let vm = viewModel {
+                content(vm: vm)
+            } else {
+                Color.clear
+                    .onAppear {
+                        viewModel = IntervalViewModel(presetStore: presetStore)
+                    }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func content(vm: IntervalViewModel) -> some View {
         NavigationStack {
             ZStack {
                 // Background gradient based on current interval colour
-                backgroundGradient
+                backgroundGradient(vm: vm)
                     .ignoresSafeArea()
 
                 VStack(spacing: 20) {
                     // Preset selector (hidden during countdown and workout)
-                    if !viewModel.state.isActive && !viewModel.isCountingIn {
+                    if !vm.state.isActive && !vm.isCountingIn {
                         presetSelector
                             .padding(.top)
                             .transition(.opacity.combined(with: .scale(scale: 0.95)))
@@ -45,31 +59,31 @@ struct HomeView: View {
                     Spacer()
 
                     // Main timer display
-                    timerDisplay
+                    timerDisplay(vm: vm)
 
                     Spacer()
 
                     // Controls
-                    if viewModel.state.isActive || viewModel.isCountingIn {
-                        activeControls
+                    if vm.state.isActive || vm.isCountingIn {
+                        activeControls(vm: vm)
                             .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     } else {
-                        startButton
+                        startButton(vm: vm)
                             .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     }
 
                     Spacer()
 
                     // Version number at bottom (hidden during countdown and workout)
-                    if !viewModel.state.isActive && !viewModel.isCountingIn {
+                    if !vm.state.isActive && !vm.isCountingIn {
                         Text("v\(appVersion)")
                             .font(.caption2)
                             .foregroundStyle(.white.opacity(0.4))
                             .padding(.bottom, 8)
                     }
                 }
-                .animation(.snappy(duration: 0.25), value: viewModel.state)
-                .animation(.snappy(duration: 0.25), value: viewModel.isCountingIn)
+                .animation(.snappy(duration: 0.25), value: vm.state)
+                .animation(.snappy(duration: 0.25), value: vm.isCountingIn)
                 .padding()
             }
             .navigationTitle("Intervally")
@@ -96,7 +110,7 @@ struct HomeView: View {
                     }
                 }
 
-                if !viewModel.state.isActive {
+                if !vm.state.isActive {
                     ToolbarItem(placement: .navigationBarLeading) {
                         if isDeleteMode {
                             Button {
@@ -133,7 +147,9 @@ struct HomeView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingSettings) {
+            .sheet(isPresented: $showingSettings, onDismiss: {
+                syncSettings(vm: vm)
+            }) {
                 SettingsView()
                     .environment(presetStore)
                     .presentationDragIndicator(.visible)
@@ -143,21 +159,21 @@ struct HomeView: View {
                     .environment(presetStore)
                     .presentationDragIndicator(.visible)
             }
-        }
-        .onAppear {
-            syncSettings()
+            .onAppear {
+                syncSettings(vm: vm)
+            }
         }
     }
 
     // MARK: - Components
 
-    private var backgroundGradient: some View {
+    private func backgroundGradient(vm: IntervalViewModel) -> some View {
         // Use grey during countdown, then interval color
         let color: Color = {
-            if viewModel.isCountingIn {
+            if vm.isCountingIn {
                 return Color.gray.opacity(0.3)
             } else {
-                return viewModel.currentInterval?.color ?? Color.blue.opacity(0.3)
+                return vm.currentInterval?.color ?? Color.blue.opacity(0.3)
             }
         }()
 
@@ -222,13 +238,13 @@ struct HomeView: View {
         }
     }
 
-    private var timerDisplay: some View {
+    private func timerDisplay(vm: IntervalViewModel) -> some View {
         VStack(spacing: 16) {
             // Progress ring with time
             ZStack {
                 ProgressRing(
-                    progress: viewModel.progress,
-                    color: viewModel.currentInterval?.color ?? .blue,
+                    progress: vm.progress,
+                    color: vm.currentInterval?.color ?? .blue,
                     lineWidth: 20
                 )
                 .frame(width: 280, height: 280)
@@ -236,14 +252,14 @@ struct HomeView: View {
 
                 VStack(spacing: 8) {
                     // Show countdown overlay if active
-                    if let countdownNum = viewModel.countdownNumber {
+                    if let countdownNum = vm.countdownNumber {
                         Text("\(countdownNum)")
                             .font(.system(size: 120, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .transition(.scale.combined(with: .opacity))
                     } else {
                         // Current interval name
-                        if let interval = viewModel.currentInterval {
+                        if let interval = vm.currentInterval {
                             Text(interval.title)
                                 .font(.title2)
                                 .fontWeight(.semibold)
@@ -251,7 +267,7 @@ struct HomeView: View {
                         }
 
                         // Remaining time
-                        Text(viewModel.formattedRemainingTime)
+                        Text(vm.formattedRemainingTime)
                             .font(.system(size: 72, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
                             .monospacedDigit()
@@ -259,21 +275,21 @@ struct HomeView: View {
                 }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel(viewModel.currentInterval != nil ?
-                "\(viewModel.currentInterval!.title). Time remaining: \(viewModel.formattedRemainingTime)" :
-                "Timer: \(viewModel.formattedRemainingTime)"
+            .accessibilityLabel(vm.currentInterval != nil ?
+                "\(vm.currentInterval!.title). Time remaining: \(vm.formattedRemainingTime)" :
+                "Timer: \(vm.formattedRemainingTime)"
             )
 
             // Cycle info
-            if viewModel.state.isActive {
-                Text(viewModel.cycleText)
+            if vm.state.isActive {
+                Text(vm.cycleText)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.8))
-                    .accessibilityLabel(viewModel.cycleText)
+                    .accessibilityLabel(vm.cycleText)
             }
 
             // Next interval preview
-            if let next = viewModel.nextInterval {
+            if let next = vm.nextInterval {
                 HStack(spacing: 8) {
                     Text("Next:")
                         .foregroundStyle(.white.opacity(0.6))
@@ -284,7 +300,7 @@ struct HomeView: View {
                 .font(.subheadline)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Next: \(next.title)")
-            } else if viewModel.state.isActive {
+            } else if vm.state.isActive {
                 Text("Last interval")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.6))
@@ -292,18 +308,18 @@ struct HomeView: View {
             }
 
             // Elapsed time
-            if viewModel.state.isActive {
-                Text("Elapsed: \(viewModel.formattedElapsedTime)")
+            if vm.state.isActive {
+                Text("Elapsed: \(vm.formattedElapsedTime)")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.5))
-                    .accessibilityLabel("Elapsed time: \(viewModel.formattedElapsedTime)")
+                    .accessibilityLabel("Elapsed time: \(vm.formattedElapsedTime)")
             }
         }
     }
 
-    private var startButton: some View {
+    private func startButton(vm: IntervalViewModel) -> some View {
         Button {
-            startWorkout()
+            startWorkout(vm: vm)
         } label: {
             Text("Start")
                 .font(.title2)
@@ -321,12 +337,12 @@ struct HomeView: View {
         .accessibilityHint(presetStore.selectedPreset != nil ? "Begin \(presetStore.selectedPreset!.name) workout" : "Select a workout first")
     }
 
-    private var activeControls: some View {
+    private func activeControls(vm: IntervalViewModel) -> some View {
         VStack(spacing: 16) {
             // Skip buttons (disabled during countdown)
             HStack(spacing: 20) {
                 Button {
-                    viewModel.skipBackward()
+                    vm.skipBackward()
                 } label: {
                     Image(systemName: "backward.fill")
                         .font(.title)
@@ -335,8 +351,8 @@ struct HomeView: View {
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
-                .disabled(viewModel.isCountingIn)
-                .opacity(viewModel.isCountingIn ? 0.5 : 1.0)
+                .disabled(vm.isCountingIn)
+                .opacity(vm.isCountingIn ? 0.5 : 1.0)
                 .buttonStyle(.plain)
                 .accessibilityLabel("Skip to previous interval")
                 .accessibilityHint("Go back to the start of the previous interval")
@@ -345,25 +361,25 @@ struct HomeView: View {
 
                 // Pause/Resume button (disabled during countdown)
                 Button {
-                    togglePause()
+                    togglePause(vm: vm)
                 } label: {
-                    Image(systemName: viewModel.state.isPaused ? "play.fill" : "pause.fill")
+                    Image(systemName: vm.state.isPaused ? "play.fill" : "pause.fill")
                         .font(.title)
                         .foregroundStyle(.white)
                         .frame(width: 80, height: 80)
                         .background(Color.orange)
                         .clipShape(Circle())
                 }
-                .disabled(viewModel.isCountingIn)
-                .opacity(viewModel.isCountingIn ? 0.5 : 1.0)
+                .disabled(vm.isCountingIn)
+                .opacity(vm.isCountingIn ? 0.5 : 1.0)
                 .buttonStyle(.plain)
-                .accessibilityLabel(viewModel.state.isPaused ? "Resume workout" : "Pause workout")
-                .accessibilityHint(viewModel.state.isPaused ? "Continue the workout" : "Pause the timer")
+                .accessibilityLabel(vm.state.isPaused ? "Resume workout" : "Pause workout")
+                .accessibilityHint(vm.state.isPaused ? "Continue the workout" : "Pause the timer")
 
                 Spacer()
 
                 Button {
-                    viewModel.skipForward()
+                    vm.skipForward()
                 } label: {
                     Image(systemName: "forward.fill")
                         .font(.title)
@@ -372,8 +388,8 @@ struct HomeView: View {
                         .background(Color.white.opacity(0.2))
                         .clipShape(Circle())
                 }
-                .disabled(viewModel.isCountingIn)
-                .opacity(viewModel.isCountingIn ? 0.5 : 1.0)
+                .disabled(vm.isCountingIn)
+                .opacity(vm.isCountingIn ? 0.5 : 1.0)
                 .buttonStyle(.plain)
                 .accessibilityLabel("Skip to next interval")
                 .accessibilityHint("Jump to the start of the next interval")
@@ -382,7 +398,7 @@ struct HomeView: View {
 
             // Stop button
             Button {
-                stopWorkout()
+                stopWorkout(vm: vm)
             } label: {
                 Text("Stop")
                     .font(.headline)
@@ -401,37 +417,37 @@ struct HomeView: View {
 
     // MARK: - Actions
 
-    private func startWorkout() {
+    private func startWorkout(vm: IntervalViewModel) {
         guard let preset = presetStore.selectedPreset else { return }
 
         Task {
-            await viewModel.start(preset: preset)
+            await vm.start(preset: preset)
         }
     }
 
-    private func togglePause() {
+    private func togglePause(vm: IntervalViewModel) {
         Task {
-            if viewModel.state.isPaused {
-                await viewModel.resume()
+            if vm.state.isPaused {
+                await vm.resume()
             } else {
-                await viewModel.pause()
+                await vm.pause()
             }
         }
     }
 
-    private func stopWorkout() {
+    private func stopWorkout(vm: IntervalViewModel) {
         Task {
-            await viewModel.stop()
+            await vm.stop()
         }
     }
 
-    private func syncSettings() {
-        viewModel.soundsEnabled = presetStore.soundsEnabled
-        viewModel.voiceEnabled = presetStore.voiceEnabled
-        viewModel.hapticsEnabled = presetStore.hapticsEnabled
-        viewModel.speechRate = presetStore.speechRate
-        viewModel.countInEnabled = presetStore.countInEnabled
-        viewModel.keepScreenAwake = presetStore.keepScreenAwake
+    private func syncSettings(vm: IntervalViewModel) {
+        vm.soundsEnabled = presetStore.soundsEnabled
+        vm.voiceEnabled = presetStore.voiceEnabled
+        vm.hapticsEnabled = presetStore.hapticsEnabled
+        vm.speechRate = presetStore.speechRate
+        vm.countInEnabled = presetStore.countInEnabled
+        vm.keepScreenAwake = presetStore.keepScreenAwake
     }
 
     private func togglePresetForDeletion(_ preset: Preset) {

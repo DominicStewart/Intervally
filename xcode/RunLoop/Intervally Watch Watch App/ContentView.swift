@@ -75,6 +75,7 @@ struct ContentView: View {
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear {
+            print("⌚️ ContentView appeared")
             // Request sync from iPhone in case we're joining mid-workout
             connectivity.requestSyncFromiPhone()
         }

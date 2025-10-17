@@ -23,6 +23,7 @@ final class IntervalViewModel {
     private let hapticsService = HapticsService()
     private let notificationService = NotificationService()
     private let watchService = WatchConnectivityService.shared
+    private let presetStore: PresetStore
 
     // MARK: - Published State (via @Observable)
 
@@ -55,7 +56,8 @@ final class IntervalViewModel {
 
     // MARK: - Initialization
 
-    init() {
+    init(presetStore: PresetStore) {
+        self.presetStore = presetStore
         setupEngineCallbacks()
         setupAudioSession()
         requestNotificationPermission()
@@ -71,7 +73,7 @@ final class IntervalViewModel {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
                 print("📱 Responding to Watch sync request")
-                self?.sendWatchUpdate()
+                self?.sendFullWorkoutSync()  // Send full workout structure for late-join
             }
             .store(in: &cancellables)
     }
@@ -156,7 +158,11 @@ final class IntervalViewModel {
         watchService.sendWorkoutStarted(
             presetName: preset.name,
             intervals: intervalsData,
-            cycleCount: preset.cycleCount
+            cycleCount: preset.cycleCount,
+            watchHapticsEnabled: presetStore.watchHapticsEnabled,
+            currentIntervalIndex: 0,  // Start at beginning
+            currentCycle: 1,  // Start at cycle 1
+            remainingTime: preset.intervals.first?.duration ?? 0  // First interval duration
         )
 
         // Start periodic watch sync (every 10 seconds for late-join scenarios)
@@ -363,14 +369,46 @@ final class IntervalViewModel {
         )
     }
 
+    /// Send full workout sync to Watch (for late-join scenarios)
+    func sendFullWorkoutSync() {
+        guard let preset = currentPreset, state.isActive || isCountingIn else {
+            // No active workout, just send timer update
+            sendWatchUpdate()
+            return
+        }
+
+        // Send full workout structure so Watch can run autonomously
+        let intervalsData = preset.intervals.map { interval in
+            [
+                "title": interval.title,
+                "duration": interval.duration,
+                "color": interval.colorHex
+            ] as [String: Any]
+        }
+
+        watchService.sendWorkoutStarted(
+            presetName: preset.name,
+            intervals: intervalsData,
+            cycleCount: preset.cycleCount,
+            watchHapticsEnabled: presetStore.watchHapticsEnabled,
+            currentIntervalIndex: currentIntervalIndex,
+            currentCycle: currentCycle,
+            remainingTime: remainingTime
+        )
+
+        print("📱 Sent full workout sync to Watch (late-join)")
+    }
+
     /// Start timer for periodic watch updates (for late-join sync)
     private func startWatchUpdateTimer() {
         stopWatchUpdateTimer()
 
         // Update every 10 seconds for late-join scenarios (when Watch app opens mid-workout)
         watchUpdateTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            Task { @MainActor in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                // Only send updates if there's an active workout
+                guard self.state.isActive || self.isCountingIn else { return }
                 self.sendWatchUpdate()
             }
         }

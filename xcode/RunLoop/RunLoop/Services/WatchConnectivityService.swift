@@ -95,7 +95,15 @@ final class WatchConnectivityService: NSObject, ObservableObject {
     }
 
     /// Send workout started event with full workout structure
-    func sendWorkoutStarted(presetName: String, intervals: [[String: Any]], cycleCount: Int?) {
+    func sendWorkoutStarted(
+        presetName: String,
+        intervals: [[String: Any]],
+        cycleCount: Int?,
+        watchHapticsEnabled: Bool,
+        currentIntervalIndex: Int,
+        currentCycle: Int,
+        remainingTime: TimeInterval
+    ) {
         guard WCSession.default.activationState == .activated else {
             print("❌ WCSession not activated, state: \(WCSession.default.activationState.rawValue)")
             return
@@ -111,7 +119,11 @@ final class WatchConnectivityService: NSObject, ObservableObject {
             "type": "workoutStarted",
             "presetName": presetName,
             "intervals": intervals,
-            "startTime": Date().timeIntervalSince1970
+            "startTime": Date().timeIntervalSince1970,
+            "watchHapticsEnabled": watchHapticsEnabled,
+            "currentIntervalIndex": currentIntervalIndex,
+            "currentCycle": currentCycle,
+            "remainingTime": remainingTime
         ]
 
         if let cycleCount = cycleCount {

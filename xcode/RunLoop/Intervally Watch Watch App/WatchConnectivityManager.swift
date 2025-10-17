@@ -35,6 +35,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     private var workoutStartTime: Date?
     private var intervalStartTime: Date?
     private var isRunningAutonomously = false
+    private var watchHapticsEnabled = true  // Haptics enabled by default
 
     // Local timer for autonomous countdown
     private var countdownTimer: Timer?
@@ -72,6 +73,11 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     }
 
     private func triggerHaptic() {
+        guard watchHapticsEnabled else {
+            print("⌚️ Haptics disabled - skipping")
+            return
+        }
+
         // Strong haptic for interval transitions
         WKInterfaceDevice.current().play(.success)
         print("⌚️ Haptic triggered on watch")
@@ -286,6 +292,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
             if let active = applicationContext["isActive"] as? Bool,
                let paused = applicationContext["isPaused"] as? Bool {
 
+                // Ignore if iPhone has no active workout
+                guard active else {
+                    print("⌚️ iPhone has no active workout - ignoring context")
+                    return
+                }
+
                 let wasPaused = self.isPaused
 
                 // If running autonomously, ONLY handle pause/resume/stop
@@ -374,6 +386,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
             return
         }
 
+        // Extract haptics setting
+        if let hapticsEnabled = data["watchHapticsEnabled"] as? Bool {
+            self.watchHapticsEnabled = hapticsEnabled
+            print("⌚️ Watch haptics: \(hapticsEnabled ? "enabled" : "disabled")")
+        }
+
         // Parse intervals
         self.intervals = intervalsData.compactMap { intervalDict in
             guard let title = intervalDict["title"] as? String,
@@ -392,17 +410,26 @@ extension WatchConnectivityManager: WCSessionDelegate {
         // Parse cycle count
         self.totalCycles = data["cycleCount"] as? Int
 
-        // Reset state
-        self.currentIntervalIndex = 0
-        self.currentCycle = 1
-        self.workoutStartTime = Date()
-        self.intervalStartTime = Date()
+        // Extract current position (for late-join scenarios)
+        let startIntervalIndex = data["currentIntervalIndex"] as? Int ?? 0
+        let startCycle = data["currentCycle"] as? Int ?? 1
+        let startRemainingTime = data["remainingTime"] as? TimeInterval ?? self.intervals[0].duration
 
-        // Set initial interval
-        let firstInterval = self.intervals[0]
-        self.currentInterval = firstInterval.title
-        self.intervalColor = firstInterval.color
-        self.remainingTime = firstInterval.duration
+        // Set state to current position
+        self.currentIntervalIndex = startIntervalIndex
+        self.currentCycle = startCycle
+        self.workoutStartTime = Date()
+
+        // Calculate interval start time based on remaining time
+        let currentIntervalDuration = self.intervals[startIntervalIndex].duration
+        let elapsed = currentIntervalDuration - startRemainingTime
+        self.intervalStartTime = Date().addingTimeInterval(-elapsed)
+
+        // Set current interval
+        let currentIntervalData = self.intervals[startIntervalIndex]
+        self.currentInterval = currentIntervalData.title
+        self.intervalColor = currentIntervalData.color
+        self.remainingTime = startRemainingTime
         self.isActive = true
         self.isPaused = false
 
