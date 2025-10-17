@@ -190,4 +190,45 @@ extension WatchConnectivityService: WCSessionDelegate {
         print("⚠️ Watch session deactivated")
         session.activate()
     }
+
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
+        Task { @MainActor in
+            await handleReceivedMessage(message)
+        }
+    }
+
+    @MainActor
+    private func handleReceivedMessage(_ message: [String: Any]) async {
+        guard let type = message["type"] as? String else {
+            print("⚠️ Received message with no type: \(message)")
+            return
+        }
+
+        print("📱 📥 Received message from Watch: \(type)")
+
+        switch type {
+        case "requestSync":
+            print("📱 Watch requested sync - sending current state")
+            // Send current workout state immediately
+            if let viewModel = getCurrentViewModel() {
+                viewModel.sendWatchUpdate()
+            }
+        default:
+            print("📱 Unknown message type: \(type)")
+        }
+    }
+
+    // Helper to get current view model (you'll need to inject this)
+    @MainActor
+    private func getCurrentViewModel() -> IntervalViewModel? {
+        // This is a simple approach - in production you'd inject the view model properly
+        // For now, we'll trigger the sync via notification or similar
+        NotificationCenter.default.post(name: .watchRequestedSync, object: nil)
+        return nil
+    }
+}
+
+// Notification name for sync requests
+extension Notification.Name {
+    static let watchRequestedSync = Notification.Name("watchRequestedSync")
 }

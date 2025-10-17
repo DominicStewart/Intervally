@@ -226,19 +226,27 @@ struct HomeView: View {
                 .accessibilityHidden(true)
 
                 VStack(spacing: 8) {
-                    // Current interval name
-                    if let interval = viewModel.currentInterval {
-                        Text(interval.title)
-                            .font(.title2)
-                            .fontWeight(.semibold)
+                    // Show countdown overlay if active
+                    if let countdownNum = viewModel.countdownNumber {
+                        Text("\(countdownNum)")
+                            .font(.system(size: 120, weight: .bold, design: .rounded))
                             .foregroundStyle(.white)
-                    }
+                            .transition(.scale.combined(with: .opacity))
+                    } else {
+                        // Current interval name
+                        if let interval = viewModel.currentInterval {
+                            Text(interval.title)
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.white)
+                        }
 
-                    // Remaining time
-                    Text(viewModel.formattedRemainingTime)
-                        .font(.system(size: 72, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
-                        .monospacedDigit()
+                        // Remaining time
+                        Text(viewModel.formattedRemainingTime)
+                            .font(.system(size: 72, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .monospacedDigit()
+                    }
                 }
             }
             .accessibilityElement(children: .combine)

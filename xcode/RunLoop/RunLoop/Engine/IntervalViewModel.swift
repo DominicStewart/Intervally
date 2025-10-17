@@ -37,6 +37,7 @@ final class IntervalViewModel {
     var progress: Double = 0
     var currentCycle: Int = 0
     var totalCycles: Int?
+    var countdownNumber: Int? = nil  // For visual countdown (3, 2, 1)
 
     // MARK: - Settings (persisted via AppStorage)
 
@@ -44,7 +45,7 @@ final class IntervalViewModel {
     var voiceEnabled: Bool = true
     var hapticsEnabled: Bool = true
     var speechRate: Double = 0.5 // AVSpeechUtterance rate
-    var countInEnabled: Bool = false
+    var countInEnabled: Bool = true  // Enable countdown by default
     var keepScreenAwake: Bool = false
 
     // MARK: - Private Properties
@@ -65,9 +66,21 @@ final class IntervalViewModel {
         setupAudioSession()
         requestNotificationPermission()
         observeEngine()
+        setupWatchSyncObserver()
     }
 
     // MARK: - Engine Observation
+
+    private func setupWatchSyncObserver() {
+        // Listen for Watch sync requests
+        NotificationCenter.default.publisher(for: .watchRequestedSync)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                print("📱 Responding to Watch sync request")
+                self?.sendWatchUpdate()
+            }
+            .store(in: &cancellables)
+    }
 
     private func observeEngine() {
         // Subscribe to all engine state changes
@@ -152,8 +165,8 @@ final class IntervalViewModel {
             cycleCount: preset.cycleCount
         )
 
-        // Watch runs autonomously - no need for periodic updates
-        // Only send pause/resume/stop commands as needed
+        // Start periodic watch sync (every 10 seconds for late-join scenarios)
+        startWatchUpdateTimer()
 
         // Live Activity will be started on first interval transition when we have valid data
 
@@ -207,11 +220,25 @@ final class IntervalViewModel {
     /// Skip to next interval
     func skipForward() {
         engine.skipForward()
+
+        // Send immediate update to Watch with new interval
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100)) // Wait for engine to update
+            sendWatchUpdate()
+            print("📱 Sent skip forward update to Watch")
+        }
     }
 
     /// Skip to previous interval
     func skipBackward() {
         engine.skipBackward()
+
+        // Send immediate update to Watch with new interval
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(100)) // Wait for engine to update
+            sendWatchUpdate()
+            print("📱 Sent skip backward update to Watch")
+        }
     }
 
     // MARK: - Formatted Helpers
@@ -289,7 +316,12 @@ final class IntervalViewModel {
             hapticsService.trigger(pattern: .intervalTransition)
         }
 
-        // Watch runs autonomously - no need to send transition updates
+        // Send interval transition to Watch (for sync if Watch app opened mid-workout)
+        watchService.sendIntervalTransition(
+            intervalTitle: interval.title,
+            remainingTime: remainingTime,
+            color: interval.colorHex
+        )
     }
 
     private func handleSessionFinish() async {
@@ -322,6 +354,9 @@ final class IntervalViewModel {
 
         // Simple count-in: 3, 2, 1
         for count in (1...3).reversed() {
+            // Show countdown number visually
+            countdownNumber = count
+
             if voiceEnabled {
                 speechService.speak("\(count)", rate: Float(speechRate))
             }
@@ -330,6 +365,9 @@ final class IntervalViewModel {
             }
             try? await Task.sleep(for: .seconds(1))
         }
+
+        // Clear countdown number after countdown completes
+        countdownNumber = nil
     }
 
     private func formatTime(_ seconds: TimeInterval) -> String {
@@ -349,18 +387,18 @@ final class IntervalViewModel {
         )
     }
 
-    /// Start timer for periodic watch updates (avoids iOS throttling)
+    /// Start timer for periodic watch updates (for late-join sync)
     private func startWatchUpdateTimer() {
         stopWatchUpdateTimer()
 
-        // Update every 2 seconds to avoid updateApplicationContext throttling
-        watchUpdateTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+        // Update every 10 seconds for late-join scenarios (when Watch app opens mid-workout)
+        watchUpdateTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
             Task { @MainActor in
                 self.sendWatchUpdate()
             }
         }
-        print("⏰ Watch update timer started (2s interval)")
+        print("⏰ Watch update timer started (10s interval)")
     }
 
     /// Stop the watch update timer

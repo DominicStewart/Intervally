@@ -74,6 +74,10 @@ struct ContentView: View {
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear {
+            // Request sync from iPhone in case we're joining mid-workout
+            connectivity.requestSyncFromiPhone()
+        }
     }
 }
 

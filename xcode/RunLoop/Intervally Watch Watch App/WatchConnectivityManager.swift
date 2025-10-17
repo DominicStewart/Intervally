@@ -197,6 +197,37 @@ extension WatchConnectivityManager: WCSessionDelegate {
 
     func sessionReachabilityDidChange(_ session: WCSession) {
         print("⌚️ Reachability changed: \(session.isReachable)")
+
+        // If iPhone becomes reachable and we're not running a workout, request sync
+        if session.isReachable && !isRunningAutonomously && !isActive {
+            print("⌚️ iPhone reachable - requesting sync")
+            requestSyncFromiPhone()
+        }
+    }
+
+    /// Request current workout state from iPhone (for late-join scenarios)
+    func requestSyncFromiPhone() {
+        // Don't request if we're already running a workout autonomously
+        if isRunningAutonomously {
+            print("⌚️ Already running autonomously - no sync needed")
+            return
+        }
+
+        guard WCSession.default.activationState == .activated else {
+            print("⌚️ ⚠️ Cannot request sync - session not activated")
+            return
+        }
+
+        guard WCSession.default.isReachable else {
+            print("⌚️ ⚠️ Cannot request sync - iPhone not reachable")
+            return
+        }
+
+        let message = ["type": "requestSync"]
+        WCSession.default.sendMessage(message, replyHandler: nil) { error in
+            print("⌚️ ⚠️ Failed to request sync: \(error.localizedDescription)")
+        }
+        print("⌚️ 📤 Sent sync request to iPhone")
     }
 
     func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any] = [:]) {
@@ -211,9 +242,13 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 print("⌚️ 📥 Message type: \(type)")
                 switch type {
                 case "intervalTransition":
-                    // IGNORE - Watch runs autonomously now
-                    // This message is only here for backwards compatibility
-                    print("⌚️ Ignoring interval transition message (running autonomously)")
+                    // If running autonomously, check if we need to sync
+                    if self.isRunningAutonomously {
+                        print("⌚️ Received interval transition while autonomous - checking sync")
+                        self.handleIntervalTransitionSync(message)
+                    } else {
+                        print("⌚️ Received interval transition - not autonomous yet")
+                    }
 
                 case "workoutStarted":
                     print("⌚️ 🏃 Processing workoutStarted message")
@@ -253,9 +288,9 @@ extension WatchConnectivityManager: WCSessionDelegate {
 
                 let wasPaused = self.isPaused
 
-                // If running autonomously, ONLY handle pause/resume/stop - ignore all time/interval updates
+                // If running autonomously, ONLY handle pause/resume/stop
                 if self.isRunningAutonomously {
-                    print("⌚️ 🚫 Running autonomously - ignoring iPhone update (active: \(active), paused: \(paused))")
+                    print("⌚️ 🚫 Running autonomously - checking state changes only")
 
                     // Only handle state changes
                     if !active {
@@ -280,7 +315,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
                     return
                 }
 
-                // Not running autonomously - use iPhone updates
+                // Not running autonomously - use iPhone updates (late-join scenario)
                 if let title = applicationContext["intervalTitle"] as? String,
                    let time = applicationContext["remainingTime"] as? TimeInterval,
                    let color = applicationContext["color"] as? String {
@@ -290,8 +325,42 @@ extension WatchConnectivityManager: WCSessionDelegate {
                     self.intervalColor = color
                     self.isActive = active
                     self.isPaused = paused
-                    print("⌚️ Using iPhone updates: \(title), \(time)s")
+                    print("⌚️ Syncing from iPhone (late-join): \(title), \(time)s")
                 }
+            }
+        }
+    }
+
+    // MARK: - Sync Handling
+
+    /// Handle interval transition sync (when Watch was opened mid-workout)
+    private func handleIntervalTransitionSync(_ data: [String: Any]) {
+        guard let title = data["intervalTitle"] as? String,
+              let time = data["remainingTime"] as? TimeInterval,
+              let color = data["color"] as? String else {
+            print("⌚️ ⚠️ Invalid interval transition data")
+            return
+        }
+
+        // Check if interval changed (title is different)
+        if title != self.currentInterval {
+            print("⌚️ 🔄 Interval changed on iPhone - syncing to: \(title)")
+
+            // Update to new interval
+            self.currentInterval = title
+            self.intervalColor = color
+            self.remainingTime = time
+            self.intervalStartTime = Date()
+
+            // Trigger haptic for the transition
+            self.triggerHaptic()
+        } else {
+            // Same interval - just check if we're significantly out of sync
+            let timeDiff = abs(self.remainingTime - time)
+            if timeDiff > 2.0 {
+                print("⌚️ 🔄 Time diff \(timeDiff)s - resyncing")
+                self.remainingTime = time
+                self.intervalStartTime = Date()
             }
         }
     }
