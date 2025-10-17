@@ -1,87 +1,98 @@
-RunLoop - Complete File Structure
+Intervally - Complete File Structure
 =====================================
 
 Intervally/
 ├── README.md                                    # Main documentation & setup guide
-├── CONFIGURATION.md                             # Detailed Xcode configuration
-├── QUICKSTART.md                                # 5-minute setup guide
-├── PROJECT_SUMMARY.md                           # Project overview & statistics
 ├── FILE_STRUCTURE.txt                           # This file
 │
-├── RunLoop/                                     # Main app target
-│   ├── RunLoopApp.swift                         # App entry point (@main)
-│   ├── Info.plist                               # Configuration & permissions
-│   │
-│   ├── Models/                                  # Data models
-│   │   ├── Interval.swift                       # Interval model (title, duration, colour)
-│   │   └── Preset.swift                         # Preset model (intervals + cycles)
-│   │
-│   ├── Engine/                                  # Core timer logic
-│   │   ├── IntervalEngine.swift                 # State machine with absolute timeline
-│   │   └── IntervalViewModel.swift              # Observable view model
-│   │
-│   ├── Services/                                # Platform services
-│   │   ├── AudioService.swift                   # AVAudioSession & chime playback
-│   │   ├── SpeechService.swift                  # Voice announcements
-│   │   ├── HapticsService.swift                 # Haptic feedback patterns
-│   │   └── NotificationService.swift            # Local notifications
-│   │
-│   ├── Persistence/                             # Data storage
-│   │   └── PresetStore.swift                    # JSON-based preset storage
-│   │
-│   ├── Views/                                   # SwiftUI views
-│   │   ├── HomeView.swift                       # Main timer interface
-│   │   ├── PresetEditorView.swift               # Create/edit presets & intervals
-│   │   ├── SettingsView.swift                   # Settings configuration
-│   │   └── Components/
-│   │       └── ProgressRing.swift               # Circular progress indicator
-│   │
-│   ├── Activity/                                # Live Activity support
-│   │   └── RunLoopActivityAttributes.swift      # Dynamic Island integration
-│   │
-│   └── Resources/                               # Assets (create manually)
-│       └── chime.wav                            # ⚠️ ADD THIS: Alert sound file
-│
-└── RunLoopTests/                                # Unit tests
-    └── IntervalEngineTests.swift                # Engine logic tests (15+ cases)
+└── xcode/                                       # Xcode project root
+    ├── WATCH_SETUP.md                           # Apple Watch setup guide
+    │
+    └── Intervally/                              # Xcode project
+        ├── Intervally.xcodeproj                 # Xcode project file
+        │
+        ├── Intervally iOS App/                  # iOS app target
+        │   ├── IntervallyApp.swift              # App entry point (@main)
+        │   ├── Info.plist                       # Configuration & permissions
+        │   ├── Intervally iOS App.entitlements  # App entitlements
+        │   │
+        │   ├── Models/                          # Data models
+        │   │   ├── Interval.swift               # Interval model (title, duration, colour)
+        │   │   └── Preset.swift                 # Preset model (intervals + cycles + HealthKit toggle)
+        │   │
+        │   ├── Engine/                          # Core timer logic
+        │   │   ├── IntervalEngine.swift         # State machine with absolute timeline
+        │   │   └── IntervalViewModel.swift      # Observable view model
+        │   │
+        │   ├── Services/                        # Platform services
+        │   │   ├── AudioService.swift           # AVAudioSession & chime playback
+        │   │   ├── SpeechService.swift          # Voice announcements
+        │   │   ├── HapticsService.swift         # Haptic feedback patterns
+        │   │   ├── NotificationService.swift    # Local notifications
+        │   │   └── WatchConnectivityService.swift # iPhone-Watch communication
+        │   │
+        │   ├── Persistence/                     # Data storage
+        │   │   └── PresetStore.swift            # JSON-based preset storage
+        │   │
+        │   ├── Views/                           # SwiftUI views
+        │   │   ├── HomeView.swift               # Main timer interface
+        │   │   ├── PresetEditorView.swift       # Create/edit presets & intervals
+        │   │   ├── SettingsView.swift           # Settings configuration
+        │   │   └── Components/
+        │   │       └── ProgressRing.swift       # Circular progress indicator
+        │   │
+        │   └── Assets.xcassets/                 # App icons and assets
+        │
+        └── Intervally Watch App/                # Apple Watch app target
+            ├── Intervally_WatchApp.swift        # Watch app entry point
+            ├── ContentView.swift                # Watch UI with LIVE indicator
+            ├── WatchConnectivityManager.swift   # Watch-iPhone communication
+            ├── WorkoutManager.swift             # HealthKit workout session management
+            ├── Intervally Watch App.entitlements # Watch app entitlements
+            ├── Intervally_Watch.entitlements    # Additional entitlements
+            └── Assets.xcassets/                 # Watch app icons
 
 
 File Count Summary
 ==================
 
-Swift Files:          19 files
-Configuration:        1 file  (Info.plist)
-Documentation:        4 files (README, CONFIGURATION, QUICKSTART, PROJECT_SUMMARY)
-Tests:                1 file
+Swift Files:          19 files (iOS: 14, Watch: 3, shared models via file sync)
+Configuration:        2 files  (Info.plist files)
+Entitlements:         3 files
+Documentation:        2 files (README, WATCH_SETUP)
 ----------------------
-Total Delivered:      25 files
-
-Asset Needed:         1 file  (chime.wav - add manually)
+Total:                26+ files
 
 
 Source Code Statistics
 ======================
 
-Models:               ~250 lines (2 files)
-Engine:               ~650 lines (2 files)
-Services:             ~450 lines (4 files)
-Persistence:          ~200 lines (1 file)
-Views:                ~900 lines (4 files)
-Activity:             ~200 lines (1 file)
-App Entry:            ~30 lines  (1 file)
-Tests:                ~400 lines (1 file)
-----------------------
-Total Swift:          ~3,080 lines
+iOS App:
+  Models:             ~250 lines (2 files)
+  Engine:             ~650 lines (2 files)
+  Services:           ~600 lines (5 files, includes WatchConnectivityService)
+  Persistence:        ~200 lines (1 file)
+  Views:              ~900 lines (4 files)
+  App Entry:          ~30 lines  (1 file)
 
-Documentation:        ~1,200 lines
-Comments in code:     ~400 lines
+Watch App:
+  WatchConnectivityManager: ~350 lines (1 file)
+  WorkoutManager:           ~200 lines (1 file)
+  ContentView:              ~150 lines (1 file)
+  App Entry:                ~30 lines  (1 file)
 ----------------------
-Grand Total:          ~4,680 lines
+Total Swift:          ~3,360 lines
+
+Documentation:        ~1,500 lines
+Comments in code:     ~500 lines
+----------------------
+Grand Total:          ~5,360 lines
 
 
 Key Features Implemented
 =========================
 
+iOS App:
 ✅ Interval timer with 2+ intervals per preset
 ✅ Save/load presets with JSON persistence
 ✅ Finite cycles or infinite repeat
@@ -93,39 +104,93 @@ Key Features Implemented
 ✅ Local notifications (fallback alerts)
 ✅ Absolute timeline (drift-free timing)
 ✅ SwiftUI with iOS 17+ @Observable
-✅ Live Activity (Dynamic Island)
 ✅ Settings (sounds/voice/haptics toggles)
 ✅ Preset editor (drag to reorder)
 ✅ Progress ring with interval colours
-✅ Unit tests (15+ test cases)
+✅ Per-preset HealthKit tracking toggle
+✅ 3-2-1 countdown before workout start
 ✅ Accessibility (VoiceOver labels)
 ✅ No third-party dependencies
+
+Apple Watch App:
+✅ Autonomous operation (independent timer)
+✅ Always-on display (raise-to-wake)
+✅ HealthKit workout session integration
+✅ Fast updates (0.5s active, 2s dimmed)
+✅ Late-join support (open mid-workout)
+✅ Configurable haptics per preset
+✅ LIVE indicator shows active session
+✅ Conditional workout saving (per preset)
+✅ Smooth interval transitions
+✅ Background execution
 
 
 Architecture Highlights
 =======================
 
-Pattern:              MVVM with Observable
-State Management:     IntervalEngine state machine
-Timing Strategy:      Absolute Date calculations
-Background Mode:      Audio session + scheduled notifications
-Persistence:          JSON file in Documents directory
-Settings:             @AppStorage for user preferences
-Testing:              XCTest with @MainActor support
+iOS App:
+  Pattern:              MVVM with Observable
+  State Management:     IntervalEngine state machine
+  Timing Strategy:      Absolute Date calculations
+  Background Mode:      Audio session + scheduled notifications
+  Persistence:          JSON file in Documents directory
+  Settings:             @AppStorage for user preferences
+  Watch Communication:  WatchConnectivity framework
+
+Watch App:
+  Pattern:              SwiftUI with @Observable
+  Timing:               Autonomous local timer (0.5s/2s intervals)
+  Background Mode:      HealthKit workout session
+  State Management:     WatchConnectivityManager
+  Workout Control:      WorkoutManager (conditional saving)
+  Communication:        WCSession with message types
+
+
+Communication Flow
+==================
+
+iPhone → Watch:
+  - workoutStarted: Full workout structure (intervals, cycles, settings)
+  - timerUpdate: Simple state update (every 10s for late-join)
+  - intervalTransition: Interval change notification
+  - workoutStopped: End workout session
+
+Watch → iPhone:
+  - requestSync: Request full workout structure (late-join scenario)
+
+Watch Operation:
+  - Receives workout structure, stores locally
+  - Starts HealthKit session (always-on display)
+  - Runs independent countdown timer
+  - Handles interval transitions autonomously
+  - Saves or discards workout based on preset setting
 
 
 Next Steps
 ==========
 
-1. Open Xcode, create new iOS App project
-2. Copy RunLoop/ folder into project
-3. Enable Background Modes > Audio capability
-4. Add chime.wav to Resources/
-5. Build and run on real iOS device (iOS 17+)
-6. Grant notification permission
-7. Start a workout and lock screen to test!
+1. Open Xcode project:
+   cd xcode/Intervally
+   open Intervally.xcodeproj
 
-See QUICKSTART.md for detailed instructions.
+2. Configure signing for both targets:
+   - Intervally iOS App
+   - Intervally Watch App
+
+3. Build and run "Intervally iOS App" on iPhone (iOS 17+)
+
+4. Install Watch app:
+   - Open Watch app on iPhone
+   - Find Intervally in "My Watch"
+   - Install on Apple Watch
+
+5. Grant permissions:
+   - Notifications (iPhone)
+   - HealthKit (Watch)
+
+6. Start a workout and test!
+
+See README.md and xcode/WATCH_SETUP.md for detailed instructions.
 
 
 Requirements Met
@@ -134,14 +199,18 @@ Requirements Met
 ✅ Production-quality code
 ✅ Clean architecture (separation of concerns)
 ✅ Comprehensive documentation
-✅ Unit test coverage
 ✅ Background reliability
 ✅ Drift-free timing (≤ 0.5s per 10 min)
 ✅ All features from specification
 ✅ No external dependencies
 ✅ British English in comments
 ✅ Accessibility support
-✅ Live Activity (bonus)
+✅ Apple Watch companion app
+✅ Autonomous watch operation
+✅ Per-preset HealthKit control
+✅ Always-on display support
 
-Status: READY FOR APP STORE SUBMISSION
-(after adding chime.wav and configuring bundle ID)
+Bundle ID: com.dominic.intervally
+Watch Bundle ID: com.dominic.intervally.watchkitapp
+
+Status: READY FOR DEPLOYMENT

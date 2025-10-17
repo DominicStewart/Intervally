@@ -7,8 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		DA313F042EA1390200FADEE1 /* Intervally Watch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DA74D44F2E9F58D2000CA047 /* Intervally Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		DA313F0B2EA13A7400FADEE1 /* Intervally Watch Watch App.app in Embed Foundation Extensions (2 items) */ = {isa = PBXBuildFile; fileRef = DA74D44F2E9F58D2000CA047 /* Intervally Watch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DA313F042EA1390200FADEE1 /* Intervally Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = DA74D44F2E9F58D2000CA047 /* Intervally Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DA313F0B2EA13A7400FADEE1 /* Intervally Watch App.app in Embed Foundation Extensions (2 items) */ = {isa = PBXBuildFile; fileRef = DA74D44F2E9F58D2000CA047 /* Intervally Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -17,7 +17,7 @@
 			containerPortal = DA74D35C2E9BF93B000CA047 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = DA74D44E2E9F58D2000CA047;
-			remoteInfo = "Intervally Watch Watch App";
+			remoteInfo = "Intervally Watch App";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -28,7 +28,7 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
-				DA313F042EA1390200FADEE1 /* Intervally Watch Watch App.app in Embed Watch Content */,
+				DA313F042EA1390200FADEE1 /* Intervally Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -49,7 +49,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				DA313F0B2EA13A7400FADEE1 /* Intervally Watch Watch App.app in Embed Foundation Extensions (2 items) */,
+				DA313F0B2EA13A7400FADEE1 /* Intervally Watch App.app in Embed Foundation Extensions (2 items) */,
 			);
 			name = "Embed Foundation Extensions (2 items)";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -57,8 +57,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		DA74D3642E9BF93B000CA047 /* RunLoop.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RunLoop.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		DA74D44F2E9F58D2000CA047 /* Intervally Watch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Intervally Watch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA74D3642E9BF93B000CA047 /* Intervally iOS App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Intervally iOS App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		DA74D44F2E9F58D2000CA047 /* Intervally Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Intervally Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		DA74D4702E9F6D7D000CA047 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		DA74D4722E9F6D7D000CA047 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		DA74D48B2E9F6EEF000CA047 /* IntervallyWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = IntervallyWidgetExtension.entitlements; sourceTree = "<group>"; };
@@ -66,27 +66,27 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		DA74D3C42E9BFF52000CA047 /* Exceptions for "RunLoop" folder in "RunLoop" target */ = {
+		DA74D3C42E9BFF52000CA047 /* Exceptions for "Intervally iOS App" folder in "Intervally iOS App" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
 			);
-			target = DA74D3632E9BF93B000CA047 /* RunLoop */;
+			target = DA74D3632E9BF93B000CA047 /* Intervally iOS App */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		DA74D3662E9BF93B000CA047 /* RunLoop */ = {
+		DA74D3662E9BF93B000CA047 /* Intervally iOS App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				DA74D3C42E9BFF52000CA047 /* Exceptions for "RunLoop" folder in "RunLoop" target */,
+				DA74D3C42E9BFF52000CA047 /* Exceptions for "Intervally iOS App" folder in "Intervally iOS App" target */,
 			);
-			path = RunLoop;
+			path = "Intervally iOS App";
 			sourceTree = "<group>";
 		};
-		DA74D4532E9F58D2000CA047 /* Intervally Watch Watch App */ = {
+		DA74D4532E9F58D2000CA047 /* Intervally Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "Intervally Watch Watch App";
+			path = "Intervally Watch App";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -113,8 +113,8 @@
 			isa = PBXGroup;
 			children = (
 				DA74D48B2E9F6EEF000CA047 /* IntervallyWidgetExtension.entitlements */,
-				DA74D3662E9BF93B000CA047 /* RunLoop */,
-				DA74D4532E9F58D2000CA047 /* Intervally Watch Watch App */,
+				DA74D3662E9BF93B000CA047 /* Intervally iOS App */,
+				DA74D4532E9F58D2000CA047 /* Intervally Watch App */,
 				DA74D46F2E9F6D7D000CA047 /* Frameworks */,
 				DA74D3652E9BF93B000CA047 /* Products */,
 			);
@@ -123,8 +123,8 @@
 		DA74D3652E9BF93B000CA047 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				DA74D3642E9BF93B000CA047 /* RunLoop.app */,
-				DA74D44F2E9F58D2000CA047 /* Intervally Watch Watch App.app */,
+				DA74D3642E9BF93B000CA047 /* Intervally iOS App.app */,
+				DA74D44F2E9F58D2000CA047 /* Intervally Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -142,9 +142,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		DA74D3632E9BF93B000CA047 /* RunLoop */ = {
+		DA74D3632E9BF93B000CA047 /* Intervally iOS App */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = DA74D36F2E9BF93C000CA047 /* Build configuration list for PBXNativeTarget "RunLoop" */;
+			buildConfigurationList = DA74D36F2E9BF93C000CA047 /* Build configuration list for PBXNativeTarget "Intervally iOS App" */;
 			buildPhases = (
 				DA74D3602E9BF93B000CA047 /* Sources */,
 				DA74D3612E9BF93B000CA047 /* Frameworks */,
@@ -158,18 +158,18 @@
 				DA313F0F2EA13B5F00FADEE1 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				DA74D3662E9BF93B000CA047 /* RunLoop */,
+				DA74D3662E9BF93B000CA047 /* Intervally iOS App */,
 			);
-			name = RunLoop;
+			name = "Intervally iOS App";
 			packageProductDependencies = (
 			);
-			productName = RunLoop;
-			productReference = DA74D3642E9BF93B000CA047 /* RunLoop.app */;
+			productName = "Intervally iOS App";
+			productReference = DA74D3642E9BF93B000CA047 /* Intervally iOS App.app */;
 			productType = "com.apple.product-type.application";
 		};
-		DA74D44E2E9F58D2000CA047 /* Intervally Watch Watch App */ = {
+		DA74D44E2E9F58D2000CA047 /* Intervally Watch App */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = DA74D45A2E9F58D3000CA047 /* Build configuration list for PBXNativeTarget "Intervally Watch Watch App" */;
+			buildConfigurationList = DA74D45A2E9F58D3000CA047 /* Build configuration list for PBXNativeTarget "Intervally Watch App" */;
 			buildPhases = (
 				DA74D44B2E9F58D2000CA047 /* Sources */,
 				DA74D44C2E9F58D2000CA047 /* Frameworks */,
@@ -181,13 +181,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				DA74D4532E9F58D2000CA047 /* Intervally Watch Watch App */,
+				DA74D4532E9F58D2000CA047 /* Intervally Watch App */,
 			);
-			name = "Intervally Watch Watch App";
+			name = "Intervally Watch App";
 			packageProductDependencies = (
 			);
-			productName = "Intervally Watch Watch App";
-			productReference = DA74D44F2E9F58D2000CA047 /* Intervally Watch Watch App.app */;
+			productName = "Intervally Watch App";
+			productReference = DA74D44F2E9F58D2000CA047 /* Intervally Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -208,7 +208,7 @@
 					};
 				};
 			};
-			buildConfigurationList = DA74D35F2E9BF93B000CA047 /* Build configuration list for PBXProject "RunLoop" */;
+			buildConfigurationList = DA74D35F2E9BF93B000CA047 /* Build configuration list for PBXProject "Intervally" */;
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -222,8 +222,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				DA74D3632E9BF93B000CA047 /* RunLoop */,
-				DA74D44E2E9F58D2000CA047 /* Intervally Watch Watch App */,
+				DA74D3632E9BF93B000CA047 /* Intervally iOS App */,
+				DA74D44E2E9F58D2000CA047 /* Intervally Watch App */,
 			);
 		};
 /* End PBXProject section */
@@ -265,7 +265,7 @@
 /* Begin PBXTargetDependency section */
 		DA313F0F2EA13B5F00FADEE1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = DA74D44E2E9F58D2000CA047 /* Intervally Watch Watch App */;
+			target = DA74D44E2E9F58D2000CA047 /* Intervally Watch App */;
 			targetProxy = DA313F0E2EA13B5F00FADEE1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -396,13 +396,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CODE_SIGN_ENTITLEMENTS = RunLoop/RunLoop.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "Intervally iOS App/Intervally iOS App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = W6B6SS8UAC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = RunLoop/Info.plist;
+				INFOPLIST_FILE = "Intervally iOS App/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Intervally;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
@@ -434,13 +434,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
-				CODE_SIGN_ENTITLEMENTS = RunLoop/RunLoop.entitlements;
+				CODE_SIGN_ENTITLEMENTS = "Intervally iOS App/Intervally iOS App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = W6B6SS8UAC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = RunLoop/Info.plist;
+				INFOPLIST_FILE = "Intervally iOS App/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Intervally;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
 				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
@@ -471,7 +471,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Intervally Watch Watch App/Intervally Watch Watch App.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Intervally Watch App/Intervally Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = W6B6SS8UAC;
@@ -509,7 +509,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "Intervally Watch Watch App/Intervally Watch Watch App.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "Intervally Watch App/Intervally Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = W6B6SS8UAC;
@@ -545,7 +545,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		DA74D35F2E9BF93B000CA047 /* Build configuration list for PBXProject "RunLoop" */ = {
+		DA74D35F2E9BF93B000CA047 /* Build configuration list for PBXProject "Intervally" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				DA74D36D2E9BF93C000CA047 /* Debug */,
@@ -554,7 +554,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		DA74D36F2E9BF93C000CA047 /* Build configuration list for PBXNativeTarget "RunLoop" */ = {
+		DA74D36F2E9BF93C000CA047 /* Build configuration list for PBXNativeTarget "Intervally iOS App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				DA74D3702E9BF93C000CA047 /* Debug */,
@@ -563,7 +563,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		DA74D45A2E9F58D3000CA047 /* Build configuration list for PBXNativeTarget "Intervally Watch Watch App" */ = {
+		DA74D45A2E9F58D3000CA047 /* Build configuration list for PBXNativeTarget "Intervally Watch App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				DA74D45B2E9F58D3000CA047 /* Debug */,

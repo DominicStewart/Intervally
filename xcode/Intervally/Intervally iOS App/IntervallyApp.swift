@@ -1,16 +1,16 @@
 //
-//  RunLoopApp.swift
-//  RunLoop
+//  IntervallyApp.swift
+//  Intervally iOS App
 //
 //  Main app entry point.
-//  Bundle ID: com.example.runloop
+//  Bundle ID: com.dominic.intervally
 //  Requires: iOS 17+
 //
 
 import SwiftUI
 
 @main
-struct RunLoopApp: App {
+struct IntervallyApp: App {
 
     // MARK: - State
 
