@@ -78,6 +78,7 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         guard WCSession.default.activationState == .activated else { return }
 
         let context: [String: Any] = [
+            "type": "timerUpdate",  // Add type to prevent overwriting workout start messages
             "intervalTitle": intervalTitle ?? "",
             "remainingTime": remainingTime,
             "isActive": isActive,
@@ -88,7 +89,7 @@ final class WatchConnectivityService: NSObject, ObservableObject {
 
         do {
             try WCSession.default.updateApplicationContext(context)
-            print("📲 Updated watch context")
+            print("📲 Updated watch context (timer update)")
         } catch {
             print("❌ Failed to update watch context: \(error.localizedDescription)")
         }
@@ -100,6 +101,7 @@ final class WatchConnectivityService: NSObject, ObservableObject {
         intervals: [[String: Any]],
         cycleCount: Int?,
         watchHapticsEnabled: Bool,
+        enableHealthKitWorkout: Bool,
         currentIntervalIndex: Int,
         currentCycle: Int,
         remainingTime: TimeInterval
@@ -121,6 +123,7 @@ final class WatchConnectivityService: NSObject, ObservableObject {
             "intervals": intervals,
             "startTime": Date().timeIntervalSince1970,
             "watchHapticsEnabled": watchHapticsEnabled,
+            "enableHealthKitWorkout": enableHealthKitWorkout,
             "currentIntervalIndex": currentIntervalIndex,
             "currentCycle": currentCycle,
             "remainingTime": remainingTime

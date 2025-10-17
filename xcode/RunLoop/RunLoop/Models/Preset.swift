@@ -21,18 +21,23 @@ struct Preset: Identifiable, Codable, Equatable, Hashable {
     /// Number of cycles to repeat (nil = infinite repeat)
     var cycleCount: Int?
 
+    /// Whether to enable HealthKit workout tracking on Apple Watch
+    var enableHealthKitWorkout: Bool
+
     // MARK: - Initializers
 
     init(
         id: UUID = UUID(),
         name: String,
         intervals: [Interval],
-        cycleCount: Int? = nil
+        cycleCount: Int? = nil,
+        enableHealthKitWorkout: Bool = true
     ) {
         self.id = id
         self.name = name
         self.intervals = intervals
         self.cycleCount = cycleCount
+        self.enableHealthKitWorkout = enableHealthKitWorkout
     }
 
     // MARK: - Computed Properties

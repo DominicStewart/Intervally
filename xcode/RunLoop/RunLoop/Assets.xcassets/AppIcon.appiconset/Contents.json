@@ -1,7 +1,7 @@
 {
   "images" : [
     {
-      "filename" : "icon2.jpg",
+      "filename" : "icon2v2.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -13,7 +13,7 @@
           "value" : "dark"
         }
       ],
-      "filename" : "icon2 1.jpg",
+      "filename" : "icon2-dark.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"
@@ -25,6 +25,7 @@
           "value" : "tinted"
         }
       ],
+      "filename" : "icon2-gradient.jpg",
       "idiom" : "universal",
       "platform" : "ios",
       "size" : "1024x1024"

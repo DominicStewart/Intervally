@@ -160,6 +160,7 @@ final class IntervalViewModel {
             intervals: intervalsData,
             cycleCount: preset.cycleCount,
             watchHapticsEnabled: presetStore.watchHapticsEnabled,
+            enableHealthKitWorkout: preset.enableHealthKitWorkout,
             currentIntervalIndex: 0,  // Start at beginning
             currentCycle: 1,  // Start at cycle 1
             remainingTime: preset.intervals.first?.duration ?? 0  // First interval duration
@@ -391,6 +392,7 @@ final class IntervalViewModel {
             intervals: intervalsData,
             cycleCount: preset.cycleCount,
             watchHapticsEnabled: presetStore.watchHapticsEnabled,
+            enableHealthKitWorkout: preset.enableHealthKitWorkout,
             currentIntervalIndex: currentIntervalIndex,
             currentCycle: currentCycle,
             remainingTime: remainingTime

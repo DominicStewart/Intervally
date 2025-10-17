@@ -36,9 +36,12 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     private var intervalStartTime: Date?
     private var isRunningAutonomously = false
     private var watchHapticsEnabled = true  // Haptics enabled by default
+    private var enableHealthKitWorkout = true  // HealthKit workout enabled by default
 
     // Local timer for autonomous countdown
     private var countdownTimer: Timer?
+    private var isAlwaysOnMode = false
+    private var lastSyncRequestTime: Date?
 
     override init() {
         super.init()
@@ -85,13 +88,29 @@ class WatchConnectivityManager: NSObject, ObservableObject {
 
     // MARK: - Autonomous Timer
 
+    /// Set Always-On display mode (adjusts timer update frequency)
+    func setAlwaysOnMode(_ isAlwaysOn: Bool) {
+        guard isAlwaysOnMode != isAlwaysOn else { return }
+        isAlwaysOnMode = isAlwaysOn
+
+        print("⌚️ Always-On mode: \(isAlwaysOn ? "ON" : "OFF")")
+
+        // Restart timer with new interval if running
+        if countdownTimer != nil {
+            startCountdown()
+        }
+    }
+
     private func startCountdown() {
         stopCountdown()
 
-        countdownTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        // Use 0.5s when active (feels responsive), 2s in Always-On mode (saves battery)
+        let interval: TimeInterval = isAlwaysOnMode ? 2.0 : 0.5
+
+        countdownTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             self?.updateCountdown()
         }
-        print("⌚️ Started autonomous countdown timer")
+        print("⌚️ Started autonomous countdown timer (interval: \(interval)s)")
     }
 
     private func stopCountdown() {
@@ -177,7 +196,8 @@ class WatchConnectivityManager: NSObject, ObservableObject {
             self.currentInterval = "Ready"
             self.remainingTime = 0
         }
-        workoutManager.endWorkout()
+        // Pass save flag to WorkoutManager
+        workoutManager.endWorkout(saveToHealthApp: enableHealthKitWorkout)
         print("⌚️ Stopped autonomous mode")
     }
 }
@@ -219,6 +239,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
             return
         }
 
+        // Throttle sync requests to once every 3 seconds
+        if let lastRequest = lastSyncRequestTime, Date().timeIntervalSince(lastRequest) < 3.0 {
+            print("⌚️ ⚠️ Sync request throttled - too soon after last request")
+            return
+        }
+
         guard WCSession.default.activationState == .activated else {
             print("⌚️ ⚠️ Cannot request sync - session not activated")
             return
@@ -233,6 +259,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
         WCSession.default.sendMessage(message, replyHandler: nil) { error in
             print("⌚️ ⚠️ Failed to request sync: \(error.localizedDescription)")
         }
+        lastSyncRequestTime = Date()
         print("⌚️ 📤 Sent sync request to iPhone")
     }
 
@@ -248,10 +275,9 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 print("⌚️ 📥 Message type: \(type)")
                 switch type {
                 case "intervalTransition":
-                    // If running autonomously, check if we need to sync
+                    // If running autonomously, ignore iPhone transitions - we have our own timer
                     if self.isRunningAutonomously {
-                        print("⌚️ Received interval transition while autonomous - checking sync")
-                        self.handleIntervalTransitionSync(message)
+                        print("⌚️ Ignoring interval transition - running autonomously with own timer")
                     } else {
                         print("⌚️ Received interval transition - not autonomous yet")
                     }
@@ -278,23 +304,35 @@ extension WatchConnectivityManager: WCSessionDelegate {
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
         print("⌚️ 📥 Received application context: \(applicationContext.keys)")
         DispatchQueue.main.async {
-            // Check if this is a workout started context (contains intervals)
+            // Check message type
             if let type = applicationContext["type"] as? String {
                 print("⌚️ 📥 Context type: \(type)")
-                if type == "workoutStarted" {
+
+                switch type {
+                case "workoutStarted":
                     print("⌚️ 🏃 Processing workoutStarted context")
                     self.handleWorkoutStarted(applicationContext)
                     return
+
+                case "timerUpdate":
+                    print("⌚️ 📥 Processing timerUpdate")
+                    // Fall through to handle timer update
+                    break
+
+                default:
+                    print("⌚️ ⚠️ Unknown context type: \(type)")
+                    break
                 }
             }
 
-            // Otherwise handle as sync update
+            // Handle timer update or legacy context without type
             if let active = applicationContext["isActive"] as? Bool,
                let paused = applicationContext["isPaused"] as? Bool {
 
-                // Ignore if iPhone has no active workout
-                guard active else {
-                    print("⌚️ iPhone has no active workout - ignoring context")
+                // If iPhone has no active workout, return
+                if !active {
+                    print("⌚️ iPhone has no active workout")
+                    self.isActive = false
                     return
                 }
 
@@ -338,6 +376,19 @@ extension WatchConnectivityManager: WCSessionDelegate {
                     self.isActive = active
                     self.isPaused = paused
                     print("⌚️ Syncing from iPhone (late-join): \(title), \(time)s")
+                    print("⌚️ ⚠️ WARNING: Receiving simple updates without full workout structure")
+                    print("⌚️ ⚠️ This means Watch is NOT in autonomous mode - updates will be slow")
+
+                    // Start HealthKit session to keep app alive during late-join
+                    // (we don't have full workout structure, so just use keep-alive mode)
+                    if active && !self.workoutManager.isWorkoutActive && !self.workoutManager.isStartingWorkout {
+                        self.workoutManager.startWorkout(presetName: "Interval Training")
+                        print("⌚️ Late-join: Starting HealthKit session for keep-alive")
+                    }
+
+                    // Request full workout structure to switch to autonomous mode
+                    print("⌚️ Requesting full workout structure from iPhone...")
+                    self.requestSyncFromiPhone()
                 }
             }
         }
@@ -380,6 +431,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
     // MARK: - Workout Handling
 
     private func handleWorkoutStarted(_ data: [String: Any]) {
+        // Prevent duplicate workout starts (iPhone sends both message AND context)
+        if isRunningAutonomously {
+            print("⌚️ Workout already started - ignoring duplicate start message")
+            return
+        }
+
         guard let presetName = data["presetName"] as? String,
               let intervalsData = data["intervals"] as? [[String: Any]] else {
             print("❌ Invalid workout data")
@@ -390,6 +447,12 @@ extension WatchConnectivityManager: WCSessionDelegate {
         if let hapticsEnabled = data["watchHapticsEnabled"] as? Bool {
             self.watchHapticsEnabled = hapticsEnabled
             print("⌚️ Watch haptics: \(hapticsEnabled ? "enabled" : "disabled")")
+        }
+
+        // Extract HealthKit workout setting
+        if let healthKitEnabled = data["enableHealthKitWorkout"] as? Bool {
+            self.enableHealthKitWorkout = healthKitEnabled
+            print("⌚️ HealthKit workout: \(healthKitEnabled ? "enabled" : "disabled")")
         }
 
         // Parse intervals
@@ -440,8 +503,18 @@ extension WatchConnectivityManager: WCSessionDelegate {
         // Mark as running autonomously
         self.isRunningAutonomously = true
 
-        // Start HealthKit workout session
-        self.workoutManager.startWorkout(presetName: presetName)
+        // Always start HealthKit workout session to keep app alive in background
+        // We'll decide whether to save or discard the data when stopping
+        if !self.workoutManager.isWorkoutActive && !self.workoutManager.isStartingWorkout {
+            self.workoutManager.startWorkout(presetName: presetName)
+            if self.enableHealthKitWorkout {
+                print("⌚️ Starting HealthKit workout session (will save to Health app): \(presetName)")
+            } else {
+                print("⌚️ Starting HealthKit workout session for keep-alive only (will not save): \(presetName)")
+            }
+        } else {
+            print("⌚️ HealthKit workout session already active")
+        }
 
         // Start autonomous countdown
         self.startCountdown()
